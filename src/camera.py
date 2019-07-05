@@ -276,8 +276,8 @@ cv2.moveWindow("cam2", 720,0)
 cam1Frames = []
 cam2Frames = []
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
-cam1Vid = cv2.VideoWriter('output1.avi',fourcc, FPS, (WIDTH,HEIGHT), False)
-cam2Vid = cv2.VideoWriter('output2.avi',fourcc, FPS, (WIDTH,HEIGHT), False)
+cam1Vid = cv2.VideoWriter('../videos/output1.avi', fourcc, FPS, (WIDTH, HEIGHT), False)
+cam2Vid = cv2.VideoWriter('../videos/output2.avi', fourcc, FPS, (WIDTH, HEIGHT), False)
 
 
 print("waiting 5s...")
@@ -291,8 +291,6 @@ while(1):
     img2 = retrieve_next_image(1, cameras)
     cam1Frames.append(img1)
     cam2Frames.append(img2)
-
-
     cv2.imshow("cam1", img1)
     cv2.imshow("cam2", img2)
 
@@ -302,10 +300,10 @@ while(1):
 print("CAM1_FRAMES_CAPTURED=" + str(len(cam1Frames)))
 print("CAM2_FRAMES_CAPTURED=" + str(len(cam2Frames)))
 print("TARGET_FPS=" + str(FPS))
-#for i in range(len(cam1Frames)):
-#
-#    cam1Vid.write(cam1Frames[i])
-#    cam2Vid.write(cam2Frames[i])
+for i in range(len(cam1Frames)):
+
+    cam1Vid.write(cam1Frames[i])
+    cam2Vid.write(cam2Frames[i])
 
 
 
