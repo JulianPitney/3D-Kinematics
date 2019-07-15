@@ -5,12 +5,11 @@ import serial
 class ArduinoController(object):
 
 
-	def __init__(self, SERIAL_PORT_PATH, BAUDRATE):
+	def __init__(self):
 
 
 		# Hardware interface
-		self.SERIAL_PORT_PATH = SERIAL_PORT_PATH
-		self.BAUDRATE = BAUDRATE
+
 		self.serialInterface = self.open_serial_interface()
 		self.wait_for_arduino_confirmation()
 
@@ -25,7 +24,7 @@ class ArduinoController(object):
 
 		# Try to open serial connection until it works
 		while(1):
-			serialInterface = serial.Serial(self.SERIAL_PORT_PATH, self.BAUDRATE, timeout=3)
+			serialInterface = serial.Serial(config.SERIAL_PORT_PATH, config.BAUDRATE, timeout=3)
 			if serialInterface.is_open:
 				return serialInterface
 			else:

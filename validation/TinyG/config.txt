@@ -1,0 +1,24 @@
+
+# get motor3 axis
+$3ma
+# set motor3 to x-axis
+$3ma=0
+# get motor3 step angle
+$3sa
+# get motor3 microstep setting
+$3mi
+# get motor3 polarity
+$3po
+# get motor3 travel per revolution
+$3tr
+# set motor3 travel per revolution
+$3tr=8
+# get x-axis jerk maximum
+$xjm
+# get x-axis limit switch states
+$xsn
+$xsx
+# set switch type (norm open or norm close)
+$st=0
+# home x-axis
+G28.2 X0

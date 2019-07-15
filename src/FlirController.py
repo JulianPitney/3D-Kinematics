@@ -2,12 +2,11 @@ import config
 import PySpin
 import cv2
 import ArduinoController as ac
-from time import sleep
-import tifffile as tif
 import numpy as np
-import os
-import random
-
+from ctypes import sizeof, c_uint8
+from mmap import mmap
+import multiprocessing as mp
+from math import floor
 
 
 class TriggerType:
@@ -15,31 +14,121 @@ class TriggerType:
     HARDWARE = 2
 
 
-class CameraController(object):
 
-    SERIAL_PORT_PATH = config.SERIAL_PORT_PATH
-    BAUDRATE = config.BAUDRATE
-    arduinoController = ac.ArduinoController(SERIAL_PORT_PATH, BAUDRATE)
-    CHOSEN_TRIGGER = TriggerType.HARDWARE
-    FPS = config.FPS
-    EXPOSURE = config.EXPOSURE
-    WIDTH = config.WIDTH
-    HEIGHT = config.HEIGHT
-    PULSE_RATE_MS = config.PULSE_RATE_MS
-    camList = None
-    system = None
-    cameras = []
-    nodemaps = []
+def shared_array(shape, path, mode='rb', dtype=c_uint8):
+    for n in reversed(shape):
+        dtype *= n
+    with open(path, mode) as fd:
+
+        size = fd.seek(0, 2)
+        if size < sizeof(dtype):
+            fd.truncate(sizeof(dtype))
+        buf = mmap(fd.fileno(), sizeof(dtype))
+        return np.ctypeslib.as_array(dtype.from_buffer(buf))
+
+
+
+def concurrent_save(shape, path, queue):
+
+
+    windows = []
+    windowNames = []
+    videoWriters = []
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+
+    for i in range(0, config.NUM_CAMERAS):
+
+        vidName = "/output" + str(i) + ".avi"
+        windowNames.append("cam" + str(i))
+        videoWriters.append(cv2.VideoWriter(config.VIDEOS_FOLDER + vidName, fourcc, config.FPS, (config.WIDTH, config.HEIGHT), False))
+        windows.append(cv2.namedWindow(windowNames[i], cv2.WINDOW_NORMAL))
+        cv2.resizeWindow(windowNames[i], 720, 540)
+        cv2.moveWindow(windowNames[i], 720, 0)
+
+
+    sharedArray = shared_array(shape, path, 'r+b')
+    frameIndex = None
+    numFramesWritten = 0
+    currentCameraIndex = 0
+    queue.put('READY')
+
+
+
+
+    while True:
+        if not queue.empty():
+
+            msg = queue.get()
+
+            if isinstance(msg, int):
+
+                numFramesRead = msg
+                if numFramesRead <= config.MAX_FRAMES_IN_BUFFER:
+                    frameIndex = numFramesRead
+                else:
+                    numArrayPasses = floor(numFramesRead / config.MAX_FRAMES_IN_BUFFER)
+                    frameIndex = numFramesRead - (numArrayPasses * config.MAX_FRAMES_IN_BUFFER)
+
+
+                frame = sharedArray[frameIndex]
+                numFramesWritten += 1
+                cv2.imshow(windowNames[currentCameraIndex], frame)
+                currentCameraIndex += 1
+                if currentCameraIndex >= config.NUM_CAMERAS:
+                    currentCameraIndex = 0
+                cv2.waitKey(1)
+
+            elif isinstance(msg, str):
+                if msg == 'RESET':
+                    frameIndex = None
+                    numFramesWritten = 0
+                    currentCameraIndex = 0
+
+
+class CameraController(object):
 
 
     def __init__(self):
+
+        self.arduinoController = ac.ArduinoController()
+        self.CHOSEN_TRIGGER = TriggerType.HARDWARE
+        self.FPS = config.FPS
+        self.EXPOSURE = config.EXPOSURE
+        self.WIDTH = config.WIDTH
+        self.HEIGHT = config.HEIGHT
+        self.PULSE_RATE_MS = config.PULSE_RATE_MS
+        self.camList = None
+        self.system = None
+        self.cameras = []
+        self.nodemaps = []
+
         # Spinnaker Initialization
         self.camList, self.system = self.init_spinnaker()
-        print(len(self.camList))
         for i in range(0, len(self.camList)):
             camera, nodemap = self.init_video_stream(i)
             self.cameras.append(camera)
             self.nodemaps.append(nodemap)
+
+        if len(self.camList) != config.NUM_CAMERAS:
+            print("Assertion Error: config.NUM_CAMERAS does not match number of attached cameras!")
+            exit()
+
+
+        # Setup shared memory for concurrent frame recording/saving
+        shape = (config.MAX_FRAMES_IN_BUFFER, config.HEIGHT, config.WIDTH)
+        path = 'tmp.buffer'
+        self.sharedArray = shared_array(shape, path, 'w+b')
+        self.saveProcQueue = mp.Queue()
+        saveProc = mp.Process(target=concurrent_save, args=(shape, path, self.saveProcQueue,))
+        saveProc.start()
+        while True:
+            if not self.saveProcQueue.empty():
+                msg = self.saveProcQueue.get()
+                if msg == 'READY':
+                    print('CONFIRMED READY')
+                    break
+
+
 
     def __del__(self):
 
@@ -250,48 +339,23 @@ class CameraController(object):
             return image_converted
 
 
-
     def synchronous_record(self):
 
-        cv2.namedWindow("cam1", cv2.WINDOW_NORMAL)
-        cv2.namedWindow("cam2", cv2.WINDOW_NORMAL)
-        cv2.resizeWindow("cam1", 720, 540)
-        cv2.resizeWindow("cam2", 720, 540)
-        cv2.moveWindow("cam1", 0, 0)
-        cv2.moveWindow("cam2", 720, 0)
-
-        cam1Frames = []
-        cam2Frames = []
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        cam1Vid = cv2.VideoWriter(config.VIDEOS_FOLDER + '/output1.avi', fourcc, self.FPS, (self.WIDTH, self.HEIGHT), False)
-        cam2Vid = cv2.VideoWriter(config.VIDEOS_FOLDER + '/output2.avi', fourcc, self.FPS, (self.WIDTH, self.HEIGHT), False)
-
-        print("waiting 5s...")
-        sleep(5)
-        print("starting pulses...")
         self.arduinoController.start_pulses(self.PULSE_RATE_MS)
+        sharedArrayPassNum = 1
 
-        while(1):
 
-            img1 = self.retrieve_next_image(0, self.cameras)
-            img2 = self.retrieve_next_image(1, self.cameras)
-            cam1Frames.append(img1)
-            cam2Frames.append(img2)
-            #cv2.imshow("cam1", img1)
-            #cv2.imshow("cam2", img2)
+        for i in range(0, config.MAX_FRAMES_IN_BUFFER - config.NUM_CAMERAS, config.NUM_CAMERAS):
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+            for camIndex in range(0, len(self.cameras)):
 
-        print("CAM1_FRAMES_CAPTURED=" + str(len(cam1Frames)))
-        print("CAM2_FRAMES_CAPTURED=" + str(len(cam2Frames)))
-        print("TARGET_FPS=" + str(self.FPS))
-        for i in range(len(cam1Frames)):
+                self.sharedArray[i + camIndex] = self.retrieve_next_image(camIndex, self.cameras)
+                self.saveProcQueue.put((i + camIndex) * sharedArrayPassNum)
 
-            cam1Vid.write(cam1Frames[i])
-            cam2Vid.write(cam2Frames[i])
+        sharedArrayPassNum += 1
 
-        cam1Vid.release()
-        cam2Vid.release()
-        cv2.destroyAllWindows()
+        self.saveProcQueue.put('RESET')
+
+
+
 
