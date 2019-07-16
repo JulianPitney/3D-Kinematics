@@ -44,7 +44,11 @@ class ArduinoController(object):
 				print("No response from arduino!")
 				break
 
-	def start_pulses(self, pulse_frequency_ms):
-		command = "PULSE " + str(pulse_frequency_ms) + "\n"
+	def pulse(self):
+		command = "PULSE " + "\n"
 		self.serialInterface.write(command.encode('UTF-8'))
-		#response = self.serialInterface.readline().decode()
+		response = self.serialInterface.readline().decode()
+		if response == 'PC\n':
+			return True
+		else:
+			return False

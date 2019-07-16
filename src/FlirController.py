@@ -7,7 +7,7 @@ from ctypes import sizeof, c_uint8
 from mmap import mmap
 import multiprocessing as mp
 from math import floor
-
+from time import sleep
 
 class TriggerType:
     SOFTWARE = 1
@@ -96,7 +96,7 @@ class CameraController(object):
         self.EXPOSURE = config.EXPOSURE
         self.WIDTH = config.WIDTH
         self.HEIGHT = config.HEIGHT
-        self.PULSE_RATE_MS = config.PULSE_RATE_MS
+        self.RECORDING_DURATION_S = config.RECORDING_DURATION_S
         self.camList = None
         self.system = None
         self.cameras = []
@@ -328,9 +328,9 @@ class CameraController(object):
 
         return result
 
-    def retrieve_next_image(self, cameraIndex, cameras):
+    def retrieve_next_image(self, cameraIndex):
 
-        image_result = cameras[cameraIndex].GetNextImage()
+        image_result = self.cameras[cameraIndex].GetNextImage()
         if image_result.IsIncomplete():
             return False
         else:
@@ -341,18 +341,29 @@ class CameraController(object):
 
     def synchronous_record(self):
 
-        self.arduinoController.start_pulses(self.PULSE_RATE_MS)
+        sharedArrayWriteIndex = 0
         sharedArrayPassNum = 1
+        numFramesToAcquire = int(config.FPS * self.RECORDING_DURATION_S)
 
+        for frameNum in range(0, numFramesToAcquire):
 
-        for i in range(0, config.MAX_FRAMES_IN_BUFFER - config.NUM_CAMERAS, config.NUM_CAMERAS):
+            pulseConfirmed = False
+            while not pulseConfirmed:
+                pulseConfirmed = self.arduinoController.pulse()
+
+                sleep(1/config.FPS - ((1/config.FPS)/5))
+
 
             for camIndex in range(0, len(self.cameras)):
 
-                self.sharedArray[i + camIndex] = self.retrieve_next_image(camIndex, self.cameras)
-                self.saveProcQueue.put((i + camIndex) * sharedArrayPassNum)
 
-        sharedArrayPassNum += 1
+                self.sharedArray[sharedArrayWriteIndex] = self.retrieve_next_image(camIndex)
+                self.saveProcQueue.put((sharedArrayWriteIndex) * sharedArrayPassNum)
+
+                sharedArrayWriteIndex += 1
+                if sharedArrayWriteIndex == config.MAX_FRAMES_IN_BUFFER:
+                    sharedArrayPassNum += 1
+                    sharedArrayWriteIndex = 0
 
         self.saveProcQueue.put('RESET')
 

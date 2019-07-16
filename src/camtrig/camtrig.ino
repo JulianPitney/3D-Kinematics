@@ -21,10 +21,8 @@ CmdParser cmdParser;
 uint32_t cmdParserTimeout = 10000;
 
 
-const int CAMTRIG1 = 5;
-const int CAMTRIG2 = 6;
-
-
+const int CAMTRIG1 = 8;
+const int CAMTRIG2 = 9;
 void setup() {
 
   // Block until serial connection established
@@ -35,6 +33,7 @@ void setup() {
 
   pinMode(CAMTRIG1, OUTPUT);
   pinMode(CAMTRIG2, OUTPUT);
+  pinMode(13, OUTPUT);
 
   Serial.write("ARDUINO READY\n");
 }
@@ -115,7 +114,7 @@ int runCommand() {
 
   if(command->cmd == "PULSE")
   {
-      if(command->argc != 2)
+      if(command->argc != 1)
       {
         sendResponse("Invalid number of parameters!");
         rc = -1;
@@ -123,6 +122,10 @@ int runCommand() {
       else
       {
         rc = pulse();
+        if(rc == 0)
+        {
+          sendResponse("PC");
+        }
       }
   }
 
@@ -132,18 +135,12 @@ int runCommand() {
 
 int pulse() {
 
-  int pulse_frequency_ms = command->params[1].toInt();
-
-  while(1)
-  {
-    digitalWrite(CAMTRIG1, LOW);
-    digitalWrite(CAMTRIG2, LOW);
-    delay(pulse_frequency_ms);
     digitalWrite(CAMTRIG1, HIGH);
     digitalWrite(CAMTRIG2, HIGH);
-    delay(1);
-  }
-
+    delayMicroseconds(5);
+    digitalWrite(CAMTRIG1, LOW);
+    digitalWrite(CAMTRIG2, LOW);
+    
   return 0;
 }
 
