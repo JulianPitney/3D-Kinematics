@@ -48,41 +48,21 @@ def concurrent_save(shape, path, queue):
 
     sharedArray = shared_array(shape, path, 'r+b')
     frameIndex = None
-    numFramesWritten = 0
     currentCameraIndex = 0
     queue.put('READY')
-
-
 
 
     while True:
         if not queue.empty():
 
-            msg = queue.get()
+            nextFrameIndex = queue.get()
+            frame = sharedArray[nextFrameIndex]
+            cv2.imshow(windowNames[currentCameraIndex], frame)
+            currentCameraIndex += 1
+            if currentCameraIndex >= config.NUM_CAMERAS:
+                currentCameraIndex = 0
+            cv2.waitKey(1)
 
-            if isinstance(msg, int):
-
-                numFramesRead = msg
-                if numFramesRead <= config.MAX_FRAMES_IN_BUFFER:
-                    frameIndex = numFramesRead
-                else:
-                    numArrayPasses = floor(numFramesRead / config.MAX_FRAMES_IN_BUFFER)
-                    frameIndex = numFramesRead - (numArrayPasses * config.MAX_FRAMES_IN_BUFFER)
-
-
-                frame = sharedArray[frameIndex]
-                numFramesWritten += 1
-                cv2.imshow(windowNames[currentCameraIndex], frame)
-                currentCameraIndex += 1
-                if currentCameraIndex >= config.NUM_CAMERAS:
-                    currentCameraIndex = 0
-                cv2.waitKey(1)
-
-            elif isinstance(msg, str):
-                if msg == 'RESET':
-                    frameIndex = None
-                    numFramesWritten = 0
-                    currentCameraIndex = 0
 
 
 class CameraController(object):
@@ -342,7 +322,6 @@ class CameraController(object):
     def synchronous_record(self):
 
         sharedArrayWriteIndex = 0
-        sharedArrayPassNum = 1
         numFramesToAcquire = int(config.FPS * self.RECORDING_DURATION_S)
 
         for frameNum in range(0, numFramesToAcquire):
@@ -356,17 +335,11 @@ class CameraController(object):
 
             for camIndex in range(0, len(self.cameras)):
 
-
                 self.sharedArray[sharedArrayWriteIndex] = self.retrieve_next_image(camIndex)
-                self.saveProcQueue.put((sharedArrayWriteIndex) * sharedArrayPassNum)
+                self.saveProcQueue.put(sharedArrayWriteIndex)
 
                 sharedArrayWriteIndex += 1
                 if sharedArrayWriteIndex == config.MAX_FRAMES_IN_BUFFER:
-                    sharedArrayPassNum += 1
                     sharedArrayWriteIndex = 0
 
         self.saveProcQueue.put('RESET')
-
-
-
-
