@@ -45,10 +45,6 @@ class ArduinoController(object):
 				break
 
 	def pulse(self):
-		command = "PULSE " + "\n"
-		self.serialInterface.write(command.encode('UTF-8'))
-		response = self.serialInterface.readline().decode()
-		if response == 'PC\n':
-			return True
-		else:
-			return False
+		self.serialInterface.write("PULSE \n".encode('UTF-8'))
+
+

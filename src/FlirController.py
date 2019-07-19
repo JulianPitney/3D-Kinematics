@@ -149,10 +149,9 @@ class CameraController(object):
         self.sharedFrameBuffer = shared_array(sharedFrameArrayShape, sharedFrameArrayPath, 'w+b', dtype=c_uint8)
         self.sharedFrameSaveCounter = shared_array(sharedFrameSaveCounterShape, sharedFrameSaveCounterPath, 'w+b', dtype=c_uint64)
         self.saveProcQueue = mp.Queue()
+        self.saveProc = mp.Process(target=concurrent_save, args=(sharedFrameArrayShape, sharedFrameArrayPath, self.saveProcQueue,                                                            sharedFrameSaveCounterShape, sharedFrameSaveCounterPath,))
+        self.saveProc.start()
 
-        saveProc = mp.Process(target=concurrent_save, args=(sharedFrameArrayShape, sharedFrameArrayPath, self.saveProcQueue,
-                                                            sharedFrameSaveCounterShape, sharedFrameSaveCounterPath,))
-        saveProc.start()
         while True:
             if not self.saveProcQueue.empty():
                 msg = self.saveProcQueue.get()
@@ -362,23 +361,14 @@ class CameraController(object):
 
         return result
 
-    def retrieve_next_image(self, cameraIndex):
-
-        image_result = self.cameras[cameraIndex].GetNextImage()
-        if image_result.IsIncomplete():
-            return False
-        else:
-            image_converted = image_result.Convert(PySpin.PixelFormat_Mono8, PySpin.HQ_LINEAR)
-            image_converted = image_converted.GetNDArray()
-            return image_converted
-
 
     def synchronous_record(self):
 
-        sharedArrayWriteIndex = 0
+        sharedFrameBufferIndex = 0
         numFramesToAcquire = int(config.FPS * config.RECORDING_DURATION_S)
         print("CAP_PROC: Starting capture!")
         self.saveProcQueue.put('START')
+        startrec = time()
         for frameNum in range(0, numFramesToAcquire):
 
             # Check that we're not lapping the frame saving process
@@ -386,24 +376,25 @@ class CameraController(object):
                 print("Error: Out of memory!")
                 exit(0)
 
-
-            # Send pulse command to Arduino and wait for confirmation
-            while not self.arduinoController.pulse():
-                continue
-
-            # Unknown race condition that seems to be fixed by sleeping this long
-            sleep(1/config.FPS - ((1/config.FPS)/5))
+            # Send pulse command to Arduino (Do not wait for confirmation)
+            self.arduinoController.pulse()
+            sleep(config.EXPOSURE/1000000)
 
 
             # Get the frames synchronously captured by all cameras and dump them into shared memory
-            for camIndex in range(0, len(self.cameras)):
+            start = time()
+            for camIndex in range(0, config.NUM_CAMERAS):
 
-                self.sharedFrameBuffer[sharedArrayWriteIndex] = self.retrieve_next_image(camIndex)
-                self.saveProcQueue.put(sharedArrayWriteIndex)
-                sharedArrayWriteIndex += 1
-                if sharedArrayWriteIndex == config.MAX_FRAMES_IN_BUFFER:
-                    sharedArrayWriteIndex = 0
-
+                img_result = self.cameras[camIndex].GetNextImage()
+                self.sharedFrameBuffer[sharedFrameBufferIndex] = img_result.GetNDArray()
+                self.saveProcQueue.put(sharedFrameBufferIndex)
+                sharedFrameBufferIndex += 1
+                if sharedFrameBufferIndex == config.MAX_FRAMES_IN_BUFFER:
+                    sharedFrameBufferIndex = 0
+            end = time()
+            print(str(end-start))
         # Let the save process know this recording is done so it should reset all it's shared memory counters
+        endrec = time()
+        print("REC TIME=" + str(endrec-startrec))
         print("CAP_PROC: Ending capture!")
         self.saveProcQueue.put('END')

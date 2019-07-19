@@ -122,10 +122,6 @@ int runCommand() {
       else
       {
         rc = pulse();
-        if(rc == 0)
-        {
-          sendResponse("PC");
-        }
       }
   }
 
