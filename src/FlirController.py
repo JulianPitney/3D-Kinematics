@@ -15,7 +15,7 @@ class TriggerType:
 
 
 
-def shared_array(shape, path, mode='rb', dtype=c_uint8):
+def shared_array(shape, path, mode, dtype):
     for n in reversed(shape):
         dtype *= n
     with open(path, mode) as fd:
@@ -28,50 +28,85 @@ def shared_array(shape, path, mode='rb', dtype=c_uint8):
 
 
 
-def concurrent_save(shape, path, queue, shape2, path2):
+def init_video_windows():
 
-
-    windows = []
     windowNames = []
+
+    for i in range(0, config.NUM_CAMERAS):
+        windowNames.append("cam" + str(i))
+        cv2.namedWindow(windowNames[i], cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(windowNames[i], 720, 540)
+        cv2.moveWindow(windowNames[i], 720, 0)
+
+    return windowNames
+
+
+
+def init_video_writers():
+
     videoWriters = []
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
     for i in range(0, config.NUM_CAMERAS):
-
         vidName = "/output" + str(i) + ".avi"
-        windowNames.append("cam" + str(i))
-        videoWriters.append(cv2.VideoWriter(config.VIDEOS_FOLDER + vidName, fourcc, config.FPS, (config.WIDTH, config.HEIGHT), False))
-        windows.append(cv2.namedWindow(windowNames[i], cv2.WINDOW_NORMAL))
-        cv2.resizeWindow(windowNames[i], 720, 540)
-        cv2.moveWindow(windowNames[i], 720, 0)
+        videoWriters.append(
+            cv2.VideoWriter(config.VIDEOS_FOLDER + vidName, fourcc, config.FPS, (config.WIDTH, config.HEIGHT), False))
+
+    return videoWriters
 
 
-    sharedArray = shared_array(shape, path, 'r+b')
+
+def concurrent_save(shape, path, queue, shape2, path2):
+
+    sharedFrameBuffer = shared_array(shape, path, 'r+b', dtype=c_uint8)
     sharedFramesSavedCounter = shared_array(shape2, path2, 'r+b', dtype=c_uint64)
-    readFrameIndex = None
-    currentCameraIndex = 0
-    queue.put('READY')
+    videoWriters = []
+    readyToSave = False
+    if config.DISPLAY_VIDEO_FEEDS:
+        windowNames = init_video_windows()
 
+    queue.put('READY')
 
     while True:
         if not queue.empty():
 
             msg = queue.get()
 
-            if isinstance(msg, int):
-                readFrameIndex = msg
-                frame = sharedArray[readFrameIndex]
-                cv2.imshow(windowNames[currentCameraIndex], frame)
+            # Start recording signal
+            if msg == 'START':
+                videoWriters = init_video_writers()
+                readyToSave = True
+            # Save frame request from capture process
+            elif isinstance(msg, int) and readyToSave:
+
+                bufferIndex = msg
+                frame = sharedFrameBuffer[bufferIndex]
+                videoWriters[currentCameraIndex].write(frame)
+                if config.DISPLAY_VIDEO_FEEDS:
+                    cv2.imshow(windowNames[currentCameraIndex], frame)
+                    cv2.waitKey(1)
+
                 currentCameraIndex += 1
                 if currentCameraIndex >= config.NUM_CAMERAS:
                     currentCameraIndex = 0
-                cv2.waitKey(1)
+
                 sharedFramesSavedCounter[0][0] += 1
-                print("SAVE_PROC_LOC=" + str(sharedFramesSavedCounter[0][0]))
-            elif isinstance(msg, str):
-                readFrameIndex = None
+
+            # End of recording signal from capture process. Reset.
+            elif msg == 'END':
+
                 currentCameraIndex = 0
                 sharedFramesSavedCounter[0][0] = 0
+                readyToSave = False
+                for videoWriter in videoWriters:
+                    videoWriter.close()
+
+
+            # Exit application signal
+            elif msg == 'SHUTDOWN':
+                pass
+
+
 
 
 class CameraController(object):
@@ -81,11 +116,6 @@ class CameraController(object):
 
         self.arduinoController = ac.ArduinoController()
         self.CHOSEN_TRIGGER = TriggerType.HARDWARE
-        self.FPS = config.FPS
-        self.EXPOSURE = config.EXPOSURE
-        self.WIDTH = config.WIDTH
-        self.HEIGHT = config.HEIGHT
-        self.RECORDING_DURATION_S = config.RECORDING_DURATION_S
         self.camList = None
         self.system = None
         self.cameras = []
@@ -104,13 +134,16 @@ class CameraController(object):
 
 
         # Setup shared memory for concurrent frame recording/saving
-        shape = (config.MAX_FRAMES_IN_BUFFER, config.HEIGHT, config.WIDTH)
-        path = 'frames.buffer'
-        self.sharedArray = shared_array(shape, path, 'w+b')
-        self.sharedFramesSavedCounter = shared_array((1, 1), 'framesSaved.buffer', 'w+b', dtype=c_uint64)
+        sharedFrameArrayShape = (config.MAX_FRAMES_IN_BUFFER, config.HEIGHT, config.WIDTH)
+        sharedFrameArrayPath = 'frames.buffer'
+        sharedFrameSaveCounterShape = (1, 1)
+        sharedFrameSaveCounterPath = 'frameCounter.buffer'
+        self.sharedFrameBuffer = shared_array(sharedFrameArrayShape, sharedFrameArrayPath, 'w+b', dtype=c_uint8)
+        self.sharedFrameSaveCounter = shared_array(sharedFrameSaveCounterShape, sharedFrameSaveCounterPath, 'w+b', dtype=c_uint64)
         self.saveProcQueue = mp.Queue()
 
-        saveProc = mp.Process(target=concurrent_save, args=(shape, path, self.saveProcQueue, (1, 1), 'framesSaved.buffer',))
+        saveProc = mp.Process(target=concurrent_save, args=(sharedFrameArrayShape, sharedFrameArrayPath, self.saveProcQueue,
+                                                            sharedFrameSaveCounterShape, sharedFrameSaveCounterPath,))
         saveProc.start()
         while True:
             if not self.saveProcQueue.empty():
@@ -144,10 +177,10 @@ class CameraController(object):
 
         camera.Init()
         nodemap = camera.GetNodeMap()
-        self.set_resolution(nodemap, self.WIDTH, self.HEIGHT)
+        self.set_resolution(nodemap, config.WIDTH, config.HEIGHT)
         self.set_isp(nodemap, False)
-        self.set_camera_exposure(camera, self.EXPOSURE)
-        self.set_camera_fps(nodemap, self.FPS)
+        self.set_camera_exposure(camera, config.EXPOSURE)
+        self.set_camera_fps(nodemap, config.FPS)
 
 
         # In order to access the node entries, they have to be casted to a pointer type (CEnumerationPtr here)
@@ -333,31 +366,32 @@ class CameraController(object):
     def synchronous_record(self):
 
         sharedArrayWriteIndex = 0
-        numFramesToAcquire = int(config.FPS * self.RECORDING_DURATION_S)
+        numFramesToAcquire = int(config.FPS * config.RECORDING_DURATION_S)
 
         for frameNum in range(0, numFramesToAcquire):
 
-            print("GEN_PROC_LOC=" + str(self.sharedFramesSavedCounter[0][0]))
-            if frameNum == 100:
-                frameNum = 90000000
-            if frameNum * config.NUM_CAMERAS >= self.sharedFramesSavedCounter[0][0] + config.MAX_FRAMES_IN_BUFFER:
+            # Check that we're not lapping the frame saving process
+            if frameNum * config.NUM_CAMERAS >= self.sharedFrameSaveCounter[0][0] + config.MAX_FRAMES_IN_BUFFER:
                 print("Error: Out of memory!")
                 exit(0)
 
 
+            # Send pulse command to Arduino and wait for confirmation
             while not self.arduinoController.pulse():
                 continue
 
-                sleep(1/config.FPS - ((1/config.FPS)/5))
+            # Unknown race condition that seems to be fixed by sleeping this long
+            sleep(1/config.FPS - ((1/config.FPS)/5))
 
 
+            # Get the frames synchronously captured by all cameras and dump them into shared memory
             for camIndex in range(0, len(self.cameras)):
 
-                self.sharedArray[sharedArrayWriteIndex] = self.retrieve_next_image(camIndex)
+                self.sharedFrameBuffer[sharedArrayWriteIndex] = self.retrieve_next_image(camIndex)
                 self.saveProcQueue.put(sharedArrayWriteIndex)
-
                 sharedArrayWriteIndex += 1
                 if sharedArrayWriteIndex == config.MAX_FRAMES_IN_BUFFER:
                     sharedArrayWriteIndex = 0
 
+        # Let the save process know this recording is done so it should reset all it's shared memory counters
         self.saveProcQueue.put('RESET')
