@@ -6,8 +6,8 @@ import numpy as np
 from ctypes import sizeof, c_uint8
 from mmap import mmap
 import multiprocessing as mp
-from math import floor
 from time import sleep
+from time import time
 
 class TriggerType:
     SOFTWARE = 1
@@ -47,7 +47,7 @@ def concurrent_save(shape, path, queue):
 
 
     sharedArray = shared_array(shape, path, 'r+b')
-    frameIndex = None
+    readFrameIndex = None
     currentCameraIndex = 0
     queue.put('READY')
 
@@ -55,14 +55,19 @@ def concurrent_save(shape, path, queue):
     while True:
         if not queue.empty():
 
-            nextFrameIndex = queue.get()
-            frame = sharedArray[nextFrameIndex]
-            cv2.imshow(windowNames[currentCameraIndex], frame)
-            currentCameraIndex += 1
-            if currentCameraIndex >= config.NUM_CAMERAS:
-                currentCameraIndex = 0
-            cv2.waitKey(1)
+            msg = queue.get()
 
+            if isinstance(msg, int):
+                readFrameIndex = msg
+                frame = sharedArray[readFrameIndex]
+                cv2.imshow(windowNames[currentCameraIndex], frame)
+                currentCameraIndex += 1
+                if currentCameraIndex >= config.NUM_CAMERAS:
+                    currentCameraIndex = 0
+                cv2.waitKey(1)
+            elif isinstance(msg, str):
+                readFrameIndex = None
+                currentCameraIndex = 0
 
 
 class CameraController(object):
