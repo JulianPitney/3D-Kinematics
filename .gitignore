@@ -1,3 +1,4 @@
 /videos/
 /DLC_PROJECTS/
 *.pyc
+*.buffer

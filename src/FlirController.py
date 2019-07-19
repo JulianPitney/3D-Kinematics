@@ -62,6 +62,8 @@ def concurrent_save(shape, path, queue, shape2, path2):
     sharedFramesSavedCounter = shared_array(shape2, path2, 'r+b', dtype=c_uint64)
     videoWriters = []
     readyToSave = False
+    currentCameraIndex = 0
+
     if config.DISPLAY_VIDEO_FEEDS:
         windowNames = init_video_windows()
 
@@ -76,6 +78,7 @@ def concurrent_save(shape, path, queue, shape2, path2):
             if msg == 'START':
                 videoWriters = init_video_writers()
                 readyToSave = True
+                print("SAVE_PROC: Starting save!")
             # Save frame request from capture process
             elif isinstance(msg, int) and readyToSave:
 
@@ -99,12 +102,17 @@ def concurrent_save(shape, path, queue, shape2, path2):
                 sharedFramesSavedCounter[0][0] = 0
                 readyToSave = False
                 for videoWriter in videoWriters:
-                    videoWriter.close()
+                    videoWriter.release()
+                videoWriters = []
+                print("SAVE_PROC: Done saving!")
 
 
             # Exit application signal
             elif msg == 'SHUTDOWN':
-                pass
+                cv2.destroyAllWindows()
+                for videoWriter in videoWriters:
+                    videoWriter.release()
+                return 0
 
 
 
@@ -159,6 +167,8 @@ class CameraController(object):
         for i in range(0, len(self.camList)):
             self.deinitialize_camera(self.cameras[i], self.nodemaps[i])
 
+        self.saveProcQueue.put('SHUTDOWN')
+        self.saveProc.join()
 
 
     def init_spinnaker(self):
@@ -367,7 +377,8 @@ class CameraController(object):
 
         sharedArrayWriteIndex = 0
         numFramesToAcquire = int(config.FPS * config.RECORDING_DURATION_S)
-
+        print("CAP_PROC: Starting capture!")
+        self.saveProcQueue.put('START')
         for frameNum in range(0, numFramesToAcquire):
 
             # Check that we're not lapping the frame saving process
@@ -394,4 +405,5 @@ class CameraController(object):
                     sharedArrayWriteIndex = 0
 
         # Let the save process know this recording is done so it should reset all it's shared memory counters
-        self.saveProcQueue.put('RESET')
+        print("CAP_PROC: Ending capture!")
+        self.saveProcQueue.put('END')
