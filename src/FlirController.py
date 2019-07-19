@@ -3,7 +3,7 @@ import PySpin
 import cv2
 import ArduinoController as ac
 import numpy as np
-from ctypes import sizeof, c_uint8
+from ctypes import sizeof, c_uint8, c_uint64
 from mmap import mmap
 import multiprocessing as mp
 from time import sleep
@@ -47,7 +47,7 @@ def concurrent_save(shape, path, queue, shape2, path2):
 
 
     sharedArray = shared_array(shape, path, 'r+b')
-    sharedFramesSavedCounter = shared_array(shape2, path2, 'r+b', dtype=c_longlong)
+    sharedFramesSavedCounter = shared_array(shape2, path2, 'r+b', dtype=c_uint64)
     readFrameIndex = None
     currentCameraIndex = 0
     queue.put('READY')
@@ -66,11 +66,12 @@ def concurrent_save(shape, path, queue, shape2, path2):
                 if currentCameraIndex >= config.NUM_CAMERAS:
                     currentCameraIndex = 0
                 cv2.waitKey(1)
-                sharedFramesSavedCounter[0] += 1
+                sharedFramesSavedCounter[0][0] += 1
+                print("SAVE_PROC_LOC=" + str(sharedFramesSavedCounter[0][0]))
             elif isinstance(msg, str):
                 readFrameIndex = None
                 currentCameraIndex = 0
-                sharedFramesSavedCounter[0] = 0
+                sharedFramesSavedCounter[0][0] = 0
 
 
 class CameraController(object):
@@ -106,10 +107,10 @@ class CameraController(object):
         shape = (config.MAX_FRAMES_IN_BUFFER, config.HEIGHT, config.WIDTH)
         path = 'frames.buffer'
         self.sharedArray = shared_array(shape, path, 'w+b')
-        self.sharedFramesSavedCounter = shared_array(1, 'framesSaved.buffer', 'w+b', dtype=c_longlong)
+        self.sharedFramesSavedCounter = shared_array((1, 1), 'framesSaved.buffer', 'w+b', dtype=c_uint64)
         self.saveProcQueue = mp.Queue()
 
-        saveProc = mp.Process(target=concurrent_save, args=(shape, path, self.saveProcQueue, 1, 'framesSaved.buffer',))
+        saveProc = mp.Process(target=concurrent_save, args=(shape, path, self.saveProcQueue, (1, 1), 'framesSaved.buffer',))
         saveProc.start()
         while True:
             if not self.saveProcQueue.empty():
@@ -336,7 +337,10 @@ class CameraController(object):
 
         for frameNum in range(0, numFramesToAcquire):
 
-            if frameNum * config.NUM_CAMERAS >= self.sharedFramesSavedCounter[0] + config.MAX_FRAMES_IN_BUFFER:
+            print("GEN_PROC_LOC=" + str(self.sharedFramesSavedCounter[0][0]))
+            if frameNum == 100:
+                frameNum = 90000000
+            if frameNum * config.NUM_CAMERAS >= self.sharedFramesSavedCounter[0][0] + config.MAX_FRAMES_IN_BUFFER:
                 print("Error: Out of memory!")
                 exit(0)
 
