@@ -50,7 +50,7 @@ def init_video_writers():
     for i in range(0, config.NUM_CAMERAS):
         vidName = "/output" + str(i) + ".avi"
         videoWriters.append(
-            cv2.VideoWriter(config.VIDEOS_FOLDER + vidName, fourcc, config.FPS, (config.WIDTH, config.HEIGHT), False))
+            cv2.VideoWriter(config.VIDEOS_FOLDER + vidName, fourcc, config.MAX_TRIGGERED_FPS, (config.WIDTH, config.HEIGHT), False))
 
     return videoWriters
 
@@ -179,6 +179,7 @@ class CameraController(object):
     def init_video_stream(self, cameraIndex):
         camera = self.camList.GetByIndex(cameraIndex)
         nodemap = self.initialize_camera(camera, True, 'Continuous')
+        self.configure_chunk_data(nodemap)
         camera.BeginAcquisition()
         return camera, nodemap
 
@@ -242,9 +243,11 @@ class CameraController(object):
 
         frameRateNode = PySpin.CFloatPtr(nodemap.GetNode("AcquisitionFrameRate"))
         if frameRateNode.GetAccessMode() != PySpin.RW:
+            print("Unable to set framerate!")
             return False
         else:
             frameRateNode.SetValue(fps)
+            print("Framerate set to " + str(fps))
 
     def set_camera_exposure(self, camera, exposure):
 
@@ -254,11 +257,13 @@ class CameraController(object):
             camera.ExposureAuto.SetValue(PySpin.ExposureAuto_Off)
 
         if camera.ExposureTime.GetAccessMode() != PySpin.RW:
+            print("Unable to set exposure!")
             return False
         else:
             # Ensure desired exposure time does not exceed the maximum
             exposure = min(camera.ExposureTime.GetMax(), exposure)
             camera.ExposureTime.SetValue(exposure)
+            print("Exposure set to " + str(exposure))
 
     def set_isp(self, nodemap, ISPMode):
 
@@ -275,13 +280,113 @@ class CameraController(object):
         if PySpin.IsAvailable(node_pixel_format) and PySpin.IsWritable(node_pixel_format):
 
             # Retrieve the desired entry node from the enumeration node
-            node_pixel_format_mono16 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName('Mono16'))
-            if PySpin.IsAvailable(node_pixel_format_mono16) and PySpin.IsReadable(node_pixel_format_mono16):
+            node_pixel_format_mono8 = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName('Mono8'))
+            if PySpin.IsAvailable(node_pixel_format_mono8) and PySpin.IsReadable(node_pixel_format_mono8):
 
                 # Retrieve the integer value from the entry node
-                pixel_format_mono16 = node_pixel_format_mono16.GetValue()
+                pixel_format_mono8 = node_pixel_format_mono8.GetValue()
                 # Set integer as new value for enumeration node
-                node_pixel_format.SetIntValue(pixel_format_mono16)
+                node_pixel_format.SetIntValue(pixel_format_mono8)
+
+    def configure_chunk_data(self, nodemap):
+        """
+        This function configures the camera to add chunk data to each image. It does
+        this by enabling each type of chunk data before enabling chunk data mode.
+        When chunk data is turned on, the data is made available in both the nodemap
+        and each image.
+
+        :param nodemap: Transport layer device nodemap.
+        :type nodemap: INodeMap
+        :return: True if successful, False otherwise
+        :rtype: bool
+        """
+        try:
+            result = True
+            print('\n*** CONFIGURING CHUNK DATA ***\n')
+
+            # Activate chunk mode
+            #
+            # *** NOTES ***
+            # Once enabled, chunk data will be available at the end of the payload
+            # of every image captured until it is disabled. Chunk data can also be
+            # retrieved from the nodemap.
+            chunk_mode_active = PySpin.CBooleanPtr(nodemap.GetNode('ChunkModeActive'))
+
+            if PySpin.IsAvailable(chunk_mode_active) and PySpin.IsWritable(chunk_mode_active):
+                chunk_mode_active.SetValue(True)
+
+            print('Chunk mode activated...')
+
+            # Enable all types of chunk data
+            #
+            # *** NOTES ***
+            # Enabling chunk data requires working with nodes: "ChunkSelector"
+            # is an enumeration selector node and "ChunkEnable" is a boolean. It
+            # requires retrieving the selector node (which is of enumeration node
+            # type), selecting the entry of the chunk data to be enabled, retrieving
+            # the corresponding boolean, and setting it to be true.
+            #
+            # In this example, all chunk data is enabled, so these steps are
+            # performed in a loop. Once this is complete, chunk mode still needs to
+            # be activated.
+            chunk_selector = PySpin.CEnumerationPtr(nodemap.GetNode('ChunkSelector'))
+
+            if not PySpin.IsAvailable(chunk_selector) or not PySpin.IsReadable(chunk_selector):
+                print('Unable to retrieve chunk selector. Aborting...\n')
+                return False
+
+            # Retrieve entries
+            #
+            # *** NOTES ***
+            # PySpin handles mass entry retrieval in a different way than the C++
+            # API. Instead of taking in a NodeList_t reference, GetEntries() takes
+            # no parameters and gives us a list of INodes. Since we want these INodes
+            # to be of type CEnumEntryPtr, we can use a list comprehension to
+            # transform all of our collected INodes into CEnumEntryPtrs at once.
+            entries = [PySpin.CEnumEntryPtr(chunk_selector_entry) for chunk_selector_entry in
+                       chunk_selector.GetEntries()]
+
+            print('Enabling entries...')
+
+            # Iterate through our list and select each entry node to enable
+            for chunk_selector_entry in entries:
+                # Go to next node if problem occurs
+                if not PySpin.IsAvailable(chunk_selector_entry) or not PySpin.IsReadable(chunk_selector_entry):
+                    continue
+
+                chunk_selector.SetIntValue(chunk_selector_entry.GetValue())
+
+                chunk_str = '\t {}:'.format(chunk_selector_entry.GetSymbolic())
+
+                # Retrieve corresponding boolean
+                chunk_enable = PySpin.CBooleanPtr(nodemap.GetNode('ChunkEnable'))
+
+                # Enable the boolean, thus enabling the corresponding chunk data
+                if not PySpin.IsAvailable(chunk_enable):
+                    print('{} not available'.format(chunk_str))
+                    result = False
+                elif chunk_enable.GetValue() is True:
+                    print('{} enabled'.format(chunk_str))
+                elif PySpin.IsWritable(chunk_enable):
+                    chunk_enable.SetValue(True)
+                    print('{} enabled'.format(chunk_str))
+                else:
+                    print('{} not writable'.format(chunk_str))
+                    result = False
+
+        except PySpin.SpinnakerException as ex:
+            print('Error: %s' % ex)
+            result = False
+
+        return result
+
+    def display_chunk_data_from_image(self, image):
+
+        chunk_data = image.GetChunkData()
+        frame_id = chunk_data.GetFrameID()
+        timestamp = chunk_data.GetTimestamp()
+        return timestamp
+
 
     def configure_trigger(self, camera):
 
@@ -365,10 +470,11 @@ class CameraController(object):
     def synchronous_record(self):
 
         sharedFrameBufferIndex = 0
-        numFramesToAcquire = int(config.FPS * config.RECORDING_DURATION_S)
-        print("CAP_PROC: Starting capture!")
+        numFramesToAcquire = int(config.MAX_TRIGGERED_FPS * config.RECORDING_DURATION_S)
         self.saveProcQueue.put('START')
-        startrec = time()
+        self.arduinoController.start_pulses(numFramesToAcquire)
+        timestamps = [[], []]
+
         for frameNum in range(0, numFramesToAcquire):
 
             # Check that we're not lapping the frame saving process
@@ -376,25 +482,25 @@ class CameraController(object):
                 print("Error: Out of memory!")
                 exit(0)
 
-            # Send pulse command to Arduino (Do not wait for confirmation)
-            self.arduinoController.pulse()
-            sleep(config.EXPOSURE/1000000)
-
-
             # Get the frames synchronously captured by all cameras and dump them into shared memory
-            start = time()
             for camIndex in range(0, config.NUM_CAMERAS):
 
                 img_result = self.cameras[camIndex].GetNextImage()
+                timestamps[camIndex].append(self.display_chunk_data_from_image(img_result))
                 self.sharedFrameBuffer[sharedFrameBufferIndex] = img_result.GetNDArray()
                 self.saveProcQueue.put(sharedFrameBufferIndex)
+                img_result.Release()
                 sharedFrameBufferIndex += 1
                 if sharedFrameBufferIndex == config.MAX_FRAMES_IN_BUFFER:
                     sharedFrameBufferIndex = 0
-            end = time()
-            print(str(end-start))
+            print(str(frameNum))
         # Let the save process know this recording is done so it should reset all it's shared memory counters
-        endrec = time()
-        print("REC TIME=" + str(endrec-startrec))
-        print("CAP_PROC: Ending capture!")
         self.saveProcQueue.put('END')
+        return 0
+        for i in range(0 , len(timestamps[0]) - 1):
+            ts1 = timestamps[0][i]
+            ts1b = timestamps[0][i+1]
+            ts2 = timestamps[1][i]
+            ts2b = timestamps[1][i+1]
+            print("CAM1 " + str(ts1b - ts1))
+            print("CAM2 " + str(ts2b - ts2))

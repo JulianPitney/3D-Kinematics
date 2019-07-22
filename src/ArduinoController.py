@@ -44,7 +44,11 @@ class ArduinoController(object):
 				print("No response from arduino!")
 				break
 
-	def pulse(self):
-		self.serialInterface.write("PULSE \n".encode('UTF-8'))
+	def start_pulses(self, numFramesToAcquire):
+		command = "PULSE " + str(numFramesToAcquire) + " " + str(config.TRIGGER_FREQUENCY_US) + "\n"
+		self.serialInterface.write(command.encode('UTF-8'))
+		#self.serialInterface.readline().decode()
+		#return True
+
 
 

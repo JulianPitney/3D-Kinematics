@@ -114,14 +114,14 @@ int runCommand() {
 
   if(command->cmd == "PULSE")
   {
-      if(command->argc != 1)
+      if(command->argc != 3)
       {
         sendResponse("Invalid number of parameters!");
         rc = -1;
       }
       else
       {
-        rc = pulse();
+        rc = pulse(command->params[1].toInt(), command->params[2].toInt());
       }
   }
 
@@ -129,14 +129,18 @@ int runCommand() {
 }
 
 
-int pulse() {
+int pulse(int numFramesToAcquire, int triggerFrequency_us) {
 
-    digitalWrite(CAMTRIG1, HIGH);
-    digitalWrite(CAMTRIG2, HIGH);
-    delayMicroseconds(5);
-    digitalWrite(CAMTRIG1, LOW);
-    digitalWrite(CAMTRIG2, LOW);
-    
+  for(int i = 0; i < numFramesToAcquire; i++)
+  {
+      digitalWrite(CAMTRIG1, HIGH);
+      digitalWrite(CAMTRIG2, HIGH);
+      delayMicroseconds(triggerFrequency_us/2);
+      digitalWrite(CAMTRIG1, LOW);
+      digitalWrite(CAMTRIG2, LOW);
+      delayMicroseconds(triggerFrequency_us/2);
+  }
+
   return 0;
 }
 
