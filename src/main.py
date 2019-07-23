@@ -3,7 +3,6 @@ import FlirController as fc
 import DLC2Wrapper as dlc
 
 
-
 def main():
 
     dlcw = dlc.DLC2Wrapper()
@@ -27,7 +26,7 @@ def main():
             print("Invalid selection, try again.")
             continue
 
-        if config.NUM_OPTIONS >= menuSelection >= 1:
+        if len(menuFunctions) >= menuSelection >= 1:
             menuFunctions[menuSelection - 1]()
         else:
             print("Invalid selection, try again.")

@@ -6,8 +6,7 @@ import numpy as np
 from ctypes import sizeof, c_uint8, c_uint64
 from mmap import mmap
 import multiprocessing as mp
-from time import sleep
-from time import time
+
 
 class TriggerType:
     SOFTWARE = 1
@@ -149,7 +148,7 @@ class CameraController(object):
         self.sharedFrameBuffer = shared_array(sharedFrameArrayShape, sharedFrameArrayPath, 'w+b', dtype=c_uint8)
         self.sharedFrameSaveCounter = shared_array(sharedFrameSaveCounterShape, sharedFrameSaveCounterPath, 'w+b', dtype=c_uint64)
         self.saveProcQueue = mp.Queue()
-        self.saveProc = mp.Process(target=concurrent_save, args=(sharedFrameArrayShape, sharedFrameArrayPath, self.saveProcQueue,                                                            sharedFrameSaveCounterShape, sharedFrameSaveCounterPath,))
+        self.saveProc = mp.Process(target=concurrent_save, args=(sharedFrameArrayShape, sharedFrameArrayPath, self.saveProcQueue, sharedFrameSaveCounterShape, sharedFrameSaveCounterPath,))
         self.saveProc.start()
 
         while True:
@@ -187,11 +186,11 @@ class CameraController(object):
 
         camera.Init()
         nodemap = camera.GetNodeMap()
+        self.set_binning_mode(nodemap)
         self.set_resolution(nodemap, config.WIDTH, config.HEIGHT)
         self.set_isp(nodemap, False)
         self.set_camera_exposure(camera, config.EXPOSURE)
         self.set_camera_fps(nodemap, config.FPS)
-
 
         # In order to access the node entries, they have to be casted to a pointer type (CEnumerationPtr here)
         node_acquisition_mode = PySpin.CEnumerationPtr(nodemap.GetNode('AcquisitionMode'))
@@ -264,6 +263,50 @@ class CameraController(object):
             exposure = min(camera.ExposureTime.GetMax(), exposure)
             camera.ExposureTime.SetValue(exposure)
             print("Exposure set to " + str(exposure))
+
+    def set_binning_mode(self, nodemap):
+
+        binningHorizontalNode = PySpin.CEnumerationPtr(nodemap.GetNode('BinningHorizontalMode'))
+        if not PySpin.IsAvailable(binningHorizontalNode) or not PySpin.IsWritable(binningHorizontalNode):
+            return False
+
+        binningHorizontalModeNode = binningHorizontalNode.GetEntryByName('Average')
+        if not PySpin.IsAvailable(binningHorizontalModeNode) or not PySpin.IsReadable(
+                binningHorizontalModeNode):
+            return False
+
+        mode = binningHorizontalModeNode.GetValue()
+        binningHorizontalNode.SetIntValue(mode)
+
+
+
+        binningHorizontalNode = PySpin.CIntegerPtr(nodemap.GetNode('BinningHorizontal'))
+        if not PySpin.IsAvailable(binningHorizontalNode) or not PySpin.IsWritable(binningHorizontalNode):
+            return False
+        else:
+            binningHorizontalNode.SetValue(1)
+
+
+
+        binningVerticalNode = PySpin.CEnumerationPtr(nodemap.GetNode('BinningVerticalMode'))
+        if not PySpin.IsAvailable(binningVerticalNode) or not PySpin.IsWritable(binningVerticalNode):
+            return False
+
+        binningVerticalModeNode = binningVerticalNode.GetEntryByName('Average')
+        if not PySpin.IsAvailable(binningVerticalModeNode) or not PySpin.IsReadable(
+                binningVerticalModeNode):
+            return False
+
+        mode = binningVerticalModeNode.GetValue()
+        binningVerticalNode.SetIntValue(mode)
+
+        binningVerticalNode = PySpin.CIntegerPtr(nodemap.GetNode('BinningVertical'))
+        if not PySpin.IsAvailable(binningVerticalNode) or not PySpin.IsWritable(binningVerticalNode):
+            return False
+        else:
+            binningVerticalNode.SetValue(1)
+
+
 
     def set_isp(self, nodemap, ISPMode):
 
