@@ -44,13 +44,13 @@ def init_video_windows():
 def init_video_writers():
 
     videoWriters = []
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
     for i in range(0, config.NUM_CAMERAS):
-        vidName = "/output" + str(i) + ".avi"
+        vidName = "/output" + str(i) + ".yuv"
         videoWriters.append(
-            cv2.VideoWriter(config.VIDEOS_FOLDER + vidName, fourcc, config.MAX_TRIGGERED_FPS, (config.WIDTH, config.HEIGHT), False))
-
+            cv2.VideoWriter(config.VIDEOS_FOLDER + vidName, cv2.CAP_FFMPEG, 0, config.MAX_TRIGGERED_FPS, (config.WIDTH, config.HEIGHT), False))
+        if videoWriters[i] != None:
+            print("Video Writer Created")
     return videoWriters
 
 
@@ -284,7 +284,7 @@ class CameraController(object):
         if not PySpin.IsAvailable(binningHorizontalNode) or not PySpin.IsWritable(binningHorizontalNode):
             return False
         else:
-            binningHorizontalNode.SetValue(1)
+            binningHorizontalNode.SetValue(config.BINNING_MODE)
 
 
 
@@ -304,7 +304,7 @@ class CameraController(object):
         if not PySpin.IsAvailable(binningVerticalNode) or not PySpin.IsWritable(binningVerticalNode):
             return False
         else:
-            binningVerticalNode.SetValue(1)
+            binningVerticalNode.SetValue(config.BINNING_MODE)
 
 
 
@@ -514,6 +514,7 @@ class CameraController(object):
 
         sharedFrameBufferIndex = 0
         numFramesToAcquire = int(config.MAX_TRIGGERED_FPS * config.RECORDING_DURATION_S)
+        print(str(numFramesToAcquire))
         self.saveProcQueue.put('START')
         self.arduinoController.start_pulses(numFramesToAcquire)
         timestamps = [[], []]
@@ -536,14 +537,13 @@ class CameraController(object):
                 sharedFrameBufferIndex += 1
                 if sharedFrameBufferIndex == config.MAX_FRAMES_IN_BUFFER:
                     sharedFrameBufferIndex = 0
-            print(str(frameNum))
+            #print(str(frameNum))
         # Let the save process know this recording is done so it should reset all it's shared memory counters
         self.saveProcQueue.put('END')
-        return 0
         for i in range(0 , len(timestamps[0]) - 1):
             ts1 = timestamps[0][i]
             ts1b = timestamps[0][i+1]
             ts2 = timestamps[1][i]
             ts2b = timestamps[1][i+1]
-            print("CAM1 " + str(ts1b - ts1))
-            print("CAM2 " + str(ts2b - ts2))
+            #print("CAM1 " + str(ts1b - ts1))
+            #print("CAM2 " + str(ts2b - ts2))

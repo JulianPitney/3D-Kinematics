@@ -121,7 +121,7 @@ int runCommand() {
       }
       else
       {
-        rc = pulse(command->params[1].toInt(), command->params[2].toInt());
+        rc = pulse(atol(command->params[1].c_str()), command->params[2].toInt());
       }
   }
 
@@ -129,9 +129,9 @@ int runCommand() {
 }
 
 
-int pulse(int numFramesToAcquire, int triggerFrequency_us) {
+int pulse(long numFramesToAcquire, int triggerFrequency_us) {
 
-  for(int i = 0; i < numFramesToAcquire; i++)
+  for(long i = 0; i < numFramesToAcquire; i++)
   {
       digitalWrite(CAMTRIG1, HIGH);
       digitalWrite(CAMTRIG2, HIGH);

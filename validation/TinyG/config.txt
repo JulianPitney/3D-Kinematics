@@ -22,3 +22,13 @@ $xsx
 $st=0
 # home x-axis
 G28.2 X0
+
+
+
+
+home
+G28.2 X0 Y0
+away
+G1 X-120 Y-120 F1000
+return
+G1 X0 Y0 F1000
