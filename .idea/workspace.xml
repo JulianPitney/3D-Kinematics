@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="d6aa5b4e-4731-421c-b130-dd019e16b3f2" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/src/FlirController.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/FlirController.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Lightsheet/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../Lightsheet/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Lightsheet/src/Scanner.py" beforeDir="false" afterPath="$PROJECT_DIR$/../Lightsheet/src/Scanner.py" afterDir="false" />
     </list>
@@ -36,14 +36,23 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/FlirController.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="468">
-              <caret line="108" column="37" lean-forward="true" selection-start-line="108" selection-start-column="37" selection-end-line="108" selection-end-column="37" />
+            <state relative-caret-position="237">
+              <caret line="97" column="38" lean-forward="true" selection-start-line="97" selection-start-column="38" selection-end-line="97" selection-end-column="38" />
               <folding>
                 <element signature="e#0#13#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/.gitignore">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="84">
+              <caret line="4" column="1" selection-start-line="4" selection-start-column="1" selection-end-line="4" selection-end-column="1" />
             </state>
           </provider>
         </entry>
@@ -119,10 +128,10 @@
       <find>icvCreateVideoWriter_FFMPEG_p</find>
       <find>open</find>
       <find>MAX_TRIGGER</find>
-      <find>RECORDING_DURATION_S</find>
       <find>writeFrame</find>
       <find>Write</find>
       <find>raw</find>
+      <find>RECORDING_DURATION_S</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -138,11 +147,11 @@
         <option value="$PROJECT_DIR$/src/dlc.py" />
         <option value="$PROJECT_DIR$/src/flir.py" />
         <option value="$PROJECT_DIR$/src/DLC2Wrapper.py" />
-        <option value="$PROJECT_DIR$/.gitignore" />
         <option value="$PROJECT_DIR$/src/ArduinoController.py" />
         <option value="$PROJECT_DIR$/src/main.py" />
         <option value="$PROJECT_DIR$/src/config.py" />
         <option value="$PROJECT_DIR$/src/FlirController.py" />
+        <option value="$PROJECT_DIR$/.gitignore" />
       </list>
     </option>
   </component>
@@ -358,12 +367,12 @@
     <frame x="-7" y="-7" width="2062" height="1126" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.1272817" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.1272817" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.3805221" />
+      <window_info anchor="bottom" id="Run" order="2" visible="true" weight="0.3805221" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.437751" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -423,13 +432,6 @@
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/framesSaved.buffer" />
-    <entry file="file://$PROJECT_DIR$/.gitignore">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="63">
-          <caret line="3" column="8" lean-forward="true" selection-start-line="3" selection-start-column="8" selection-end-line="3" selection-end-column="8" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://C:/Tools/spinnaker_python-1.20.0.15-cp36-cp36m-win_amd64/Examples/Python3/Trigger.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-5685">
@@ -560,11 +562,18 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/FlirController.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="468">
-          <caret line="108" column="37" lean-forward="true" selection-start-line="108" selection-start-column="37" selection-end-line="108" selection-end-column="37" />
+        <state relative-caret-position="237">
+          <caret line="97" column="38" lean-forward="true" selection-start-line="97" selection-start-column="38" selection-end-line="97" selection-end-column="38" />
           <folding>
             <element signature="e#0#13#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/.gitignore">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="84">
+          <caret line="4" column="1" selection-start-line="4" selection-start-column="1" selection-end-line="4" selection-end-column="1" />
         </state>
       </provider>
     </entry>
