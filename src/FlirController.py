@@ -49,8 +49,6 @@ def init_video_writers():
         vidName = "/output" + str(i) + ".yuv"
         videoWriters.append(
             cv2.VideoWriter(config.VIDEOS_FOLDER + vidName, cv2.CAP_FFMPEG, 0, config.MAX_TRIGGERED_FPS, (config.WIDTH, config.HEIGHT), False))
-        if videoWriters[i] != None:
-            print("Video Writer Created")
     return videoWriters
 
 
@@ -103,8 +101,10 @@ def concurrent_save(shape, path, queue, shape2, path2):
                 for videoWriter in videoWriters:
                     videoWriter.release()
                 videoWriters = []
-                print("SAVE_PROC: Done saving!")
 
+                #TODO: Videos should get encoded by ffmpeg after recording finishes
+                # <ffmpeg -f rawvideo -pix_fmt gray -video_size 1440x1080 -framerate 166 -i output0.yuv -c:v libx264 output0.mp4>
+                print("SAVE_PROC: Done saving!")
 
             # Exit application signal
             elif msg == 'SHUTDOWN':
@@ -514,7 +514,6 @@ class CameraController(object):
 
         sharedFrameBufferIndex = 0
         numFramesToAcquire = int(config.MAX_TRIGGERED_FPS * config.RECORDING_DURATION_S)
-        print(str(numFramesToAcquire))
         self.saveProcQueue.put('START')
         self.arduinoController.start_pulses(numFramesToAcquire)
         timestamps = [[], []]
@@ -537,7 +536,6 @@ class CameraController(object):
                 sharedFrameBufferIndex += 1
                 if sharedFrameBufferIndex == config.MAX_FRAMES_IN_BUFFER:
                     sharedFrameBufferIndex = 0
-            #print(str(frameNum))
         # Let the save process know this recording is done so it should reset all it's shared memory counters
         self.saveProcQueue.put('END')
         for i in range(0 , len(timestamps[0]) - 1):
