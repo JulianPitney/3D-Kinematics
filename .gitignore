@@ -2,4 +2,4 @@
 /DLC_PROJECTS/
 *.pyc
 *.buffer
-
+.idea/
