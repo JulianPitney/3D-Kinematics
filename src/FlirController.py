@@ -101,9 +101,6 @@ def concurrent_save(shape, path, queue, shape2, path2):
                 for videoWriter in videoWriters:
                     videoWriter.release()
                 videoWriters = []
-
-                #TODO: Videos should get encoded by ffmpeg after recording finishes
-                # <ffmpeg -f rawvideo -pix_fmt gray -video_size 1440x1080 -framerate 166 -i output0.yuv -c:v libx264 output0.mp4>
                 print("SAVE_PROC: Done saving!")
 
             # Exit application signal
