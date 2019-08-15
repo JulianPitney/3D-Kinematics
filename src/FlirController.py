@@ -6,7 +6,7 @@ import numpy as np
 from ctypes import sizeof, c_uint8, c_uint64
 from mmap import mmap
 import multiprocessing as mp
-
+from time import sleep
 
 class TriggerType:
     SOFTWARE = 1
@@ -53,7 +53,7 @@ def init_video_writers():
 
 
 
-def concurrent_save(shape, path, queue, shape2, path2):
+def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
 
     sharedFrameBuffer = shared_array(shape, path, 'r+b', dtype=c_uint8)
     sharedFramesSavedCounter = shared_array(shape2, path2, 'r+b', dtype=c_uint64)
@@ -64,7 +64,7 @@ def concurrent_save(shape, path, queue, shape2, path2):
     if config.DISPLAY_VIDEO_FEEDS:
         windowNames = init_video_windows()
 
-    queue.put('READY')
+    mainQueue.put('READY')
 
     while True:
         if not queue.empty():
@@ -145,12 +145,13 @@ class CameraController(object):
         self.sharedFrameBuffer = shared_array(sharedFrameArrayShape, sharedFrameArrayPath, 'w+b', dtype=c_uint8)
         self.sharedFrameSaveCounter = shared_array(sharedFrameSaveCounterShape, sharedFrameSaveCounterPath, 'w+b', dtype=c_uint64)
         self.saveProcQueue = mp.Queue()
-        self.saveProc = mp.Process(target=concurrent_save, args=(sharedFrameArrayShape, sharedFrameArrayPath, self.saveProcQueue, sharedFrameSaveCounterShape, sharedFrameSaveCounterPath,))
+        self.mainQueue = mp.Queue()
+        self.saveProc = mp.Process(target=concurrent_save, args=(sharedFrameArrayShape, sharedFrameArrayPath, self.saveProcQueue, self.mainQueue, sharedFrameSaveCounterShape, sharedFrameSaveCounterPath,))
         self.saveProc.start()
 
         while True:
-            if not self.saveProcQueue.empty():
-                msg = self.saveProcQueue.get()
+            if not self.mainQueue.empty():
+                msg = self.mainQueue.get()
                 if msg == 'READY':
                     print('CONFIRMED READY')
                     break
@@ -513,10 +514,10 @@ class CameraController(object):
         numFramesToAcquire = int(config.MAX_TRIGGERED_FPS * config.RECORDING_DURATION_S)
         self.saveProcQueue.put('START')
         self.arduinoController.start_pulses(numFramesToAcquire)
-        timestamps = [[], []]
+        timestamps = [[], [], [], []]
 
         for frameNum in range(0, numFramesToAcquire):
-
+            print(frameNum)
             # Check that we're not lapping the frame saving process
             if frameNum * config.NUM_CAMERAS >= self.sharedFrameSaveCounter[0][0] + config.MAX_FRAMES_IN_BUFFER:
                 print("Error: Out of memory!")

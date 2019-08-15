@@ -21,8 +21,7 @@ CmdParser cmdParser;
 uint32_t cmdParserTimeout = 10000;
 
 
-const int CAMTRIG1 = 8;
-const int CAMTRIG2 = 9;
+const int CAMTRIG = 4;
 void setup() {
 
   // Block until serial connection established
@@ -31,8 +30,7 @@ void setup() {
     delay(100);
   }
 
-  pinMode(CAMTRIG1, OUTPUT);
-  pinMode(CAMTRIG2, OUTPUT);
+  pinMode(CAMTRIG, OUTPUT);
   pinMode(13, OUTPUT);
 
   Serial.write("ARDUINO READY\n");
@@ -133,11 +131,9 @@ int pulse(long numFramesToAcquire, int triggerFrequency_us) {
 
   for(long i = 0; i < numFramesToAcquire; i++)
   {
-      digitalWrite(CAMTRIG1, HIGH);
-      digitalWrite(CAMTRIG2, HIGH);
+      digitalWrite(CAMTRIG, HIGH);
       delayMicroseconds(triggerFrequency_us/2);
-      digitalWrite(CAMTRIG1, LOW);
-      digitalWrite(CAMTRIG2, LOW);
+      digitalWrite(CAMTRIG, LOW);
       delayMicroseconds(triggerFrequency_us/2);
   }
 
