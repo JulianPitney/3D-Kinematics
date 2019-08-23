@@ -6,22 +6,8 @@ import os
 # STRINGS
 MENU_MSG = """Select Function:
 [1] Record Video
-[2] Create Project
-[3] Load Project
-[4] Extract Frames
-[5] Label Frames
-[6] Check Labels
-[7] Create Training Dataset
-[8] Train Network
-[9] Evaluate Network
-[10] Analyze Videos
-[11] Filter Predictions
-[12] Create Labeled Videos
-[13] Plot Trajectories
-[14] Extract Outlier Frames
-[15] Refine Labels
-[16] Merge Datasets
-[17] Exit
+[2] Take Calibration Pictures
+[3] Exit
 Input: """
 
 
@@ -33,7 +19,8 @@ BAUDRATE = 115200
 
 # CAMERA CONFIG
 FPS = 60
-EXPOSURE = 2000
+EXPOSURE = 1000
+GAIN = 17
 BINNING_MODE = 1
 WIDTH = 1440
 HEIGHT = 1080
@@ -44,9 +31,10 @@ TRIGGER_FREQUENCY_US = ((1 / MAX_TRIGGERED_FPS) * 1000000)
 NUM_CAMERAS = 2
 MAX_FRAME_BUFFER_SIZE_MB = 8000
 MAX_FRAMES_IN_BUFFER = int(MAX_FRAME_BUFFER_SIZE_MB / ((WIDTH * HEIGHT) / 1000000)) + NUM_CAMERAS - 1
-DISPLAY_VIDEO_FEEDS = True
+DISPLAY_VIDEO_FEEDS = False
 
 # DLC CONFIG
+CALIBRATION_IMAGES_FOLDER = "C:/Projects/3D-Kinematics/calibration_images"
 VIDEOS_FOLDER = "C:/Projects/3D-Kinematics/videos"
 PROJECTS_FOLDER = "C:/Projects/3D-Kinematics/DLC_PROJECTS"
 

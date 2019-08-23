@@ -186,10 +186,12 @@ class CameraController(object):
         nodemap = camera.GetNodeMap()
         self.set_binning_mode(nodemap)
         self.set_resolution(nodemap, config.WIDTH, config.HEIGHT)
-        self.set_isp(nodemap, False)
         self.set_camera_exposure(camera, config.EXPOSURE)
+        self.set_camera_gain(camera, config.GAIN)
+        self.set_isp(nodemap, False)
         self.set_camera_fps(nodemap, config.FPS)
-
+        camera.OffsetX.SetValue(int((1440 - config.WIDTH) / 2))
+        camera.OffsetY.SetValue(int((1080 - config.HEIGHT) / 2))
         # In order to access the node entries, they have to be casted to a pointer type (CEnumerationPtr here)
         node_acquisition_mode = PySpin.CEnumerationPtr(nodemap.GetNode('AcquisitionMode'))
         if not PySpin.IsAvailable(node_acquisition_mode) or not PySpin.IsWritable(node_acquisition_mode):
@@ -245,6 +247,24 @@ class CameraController(object):
         else:
             frameRateNode.SetValue(fps)
             print("Framerate set to " + str(fps))
+
+    def set_camera_gain(self, camera, gain):
+
+        if camera.GainAuto.GetAccessMode() != PySpin.RW:
+            print("Unable to set gain")
+            return False
+        else:
+            camera.GainAuto.SetValue(PySpin.GainAuto_Off)
+
+        if camera.Gain.GetAccessMode() != PySpin.RW:
+            print("Unable to set gain")
+            return False
+        else:
+            gain = min(camera.Gain.GetMax(), gain)
+            camera.Gain.SetValue(gain)
+            print("Gain set to " + str(gain))
+
+
 
     def set_camera_exposure(self, camera, exposure):
 
@@ -514,10 +534,9 @@ class CameraController(object):
         numFramesToAcquire = int(config.MAX_TRIGGERED_FPS * config.RECORDING_DURATION_S)
         self.saveProcQueue.put('START')
         self.arduinoController.start_pulses(numFramesToAcquire)
-        timestamps = [[], [], [], []]
+        #timestamps = [[], [], [], []]
 
         for frameNum in range(0, numFramesToAcquire):
-            print(frameNum)
             # Check that we're not lapping the frame saving process
             if frameNum * config.NUM_CAMERAS >= self.sharedFrameSaveCounter[0][0] + config.MAX_FRAMES_IN_BUFFER:
                 print("Error: Out of memory!")
@@ -527,7 +546,7 @@ class CameraController(object):
             for camIndex in range(0, config.NUM_CAMERAS):
 
                 img_result = self.cameras[camIndex].GetNextImage()
-                timestamps[camIndex].append(self.display_chunk_data_from_image(img_result))
+                #timestamps[camIndex].append(self.display_chunk_data_from_image(img_result))
                 self.sharedFrameBuffer[sharedFrameBufferIndex] = img_result.GetNDArray()
                 self.saveProcQueue.put(sharedFrameBufferIndex)
                 img_result.Release()
@@ -536,6 +555,7 @@ class CameraController(object):
                     sharedFrameBufferIndex = 0
         # Let the save process know this recording is done so it should reset all it's shared memory counters
         self.saveProcQueue.put('END')
+        """
         for i in range(0 , len(timestamps[0]) - 1):
             ts1 = timestamps[0][i]
             ts1b = timestamps[0][i+1]
@@ -543,3 +563,22 @@ class CameraController(object):
             ts2b = timestamps[1][i+1]
             #print("CAM1 " + str(ts1b - ts1))
             #print("CAM2 " + str(ts2b - ts2))
+        """
+
+    def synchronous_picture(self):
+
+        numPicsToTake = int(input("Enter number of pairs to take: "))
+        windowNames = init_video_windows()
+
+        for i in range(0, numPicsToTake):
+
+            self.arduinoController.start_pulses(1)
+            for camIndex in range(0, config.NUM_CAMERAS):
+                img_result = self.cameras[camIndex].GetNextImage()
+                img_result = img_result.GetNDArray()
+                cv2.imshow(windowNames[camIndex], img_result)
+
+                cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER + "/camera-" + str(camIndex + 1) + "-%02d" % (i + 1) + '.jpg', img_result)
+            cv2.waitKey(0)
+
+        cv2.destroyAllWindows()

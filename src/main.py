@@ -1,21 +1,11 @@
 import config
 import FlirController as fc
-import DLC2Wrapper as dlc
 
 
 def main():
 
-    dlcw = dlc.DLC2Wrapper()
     flirController = fc.CameraController()
-
-    menuFunctions = [flirController.synchronous_record, dlcw.create_proj, dlcw.load_proj, dlcw.extract_frames,
-                     dlcw.label_frames, dlcw.check_labels, dlcw.create_training_dataset,
-                     dlcw.train_network, dlcw.evaluate_network, dlcw.analyze_videos,
-                     dlcw.filter_predictions, dlcw.create_labeled_video,
-                     dlcw.plot_trajectories, dlcw.extract_outlier_frames,
-                     dlcw.refine_labels, dlcw.merge_datasets, exit]
-
-
+    menuFunctions = [flirController.synchronous_record, flirController.synchronous_picture, exit]
 
     while True:
 
