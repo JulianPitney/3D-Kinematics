@@ -1,4 +1,4 @@
-import deeplabcut
+import deeplabcut as dlc
 import config
 import os
 from tkinter import filedialog
@@ -6,17 +6,8 @@ from tkinter import filedialog
 
 class DLC2Wrapper(object):
 
-    currentConfigPath = ""
-
     def __init__(self):
         pass
-
-    def create_proj(self):
-
-        projectName = input("Project Name: ")
-        experimenterName = input("Experimenter Name: ")
-        videoPaths = []
-        self.currentConfigPath = deeplabcut.create_new_project(projectName, experimenterName, videoPaths, config.PROJECTS_FOLDER, copy_videos=False)
 
 
     def load_proj(self):
@@ -24,46 +15,26 @@ class DLC2Wrapper(object):
         projDirectory = filedialog.askdirectory(initialdir=config.PROJECTS_FOLDER)
         configPath = projDirectory + "/config.yaml"
         if os.path.isfile(configPath):
-            self.currentConfigPath = configPath
+            print(configPath)
+            return configPath
         else:
             print("Project has no config.yaml file.")
 
+    def detect_calibration_patterns(self):
+        dlc.calibrate_cameras(config.DLC_3D_PAIR_1_2_CONFIG_PATH, config.CALIBRATION_CHECKERBOARD_ROWS, config.CALIBRATION_CHECKERBOARD_COLS, calibrate=False, alpha=0.9)
+        dlc.calibrate_cameras(config.DLC_3D_PAIR_2_3_CONFIG_PATH, config.CALIBRATION_CHECKERBOARD_ROWS, config.CALIBRATION_CHECKERBOARD_COLS, calibrate=False, alpha=0.9)
+        dlc.calibrate_cameras(config.DLC_3D_PAIR_3_4_CONFIG_PATH, config.CALIBRATION_CHECKERBOARD_ROWS, config.CALIBRATION_CHECKERBOARD_COLS, calibrate=False, alpha=0.9)
+        dlc.calibrate_cameras(config.DLC_3D_PAIR_4_1_CONFIG_PATH, config.CALIBRATION_CHECKERBOARD_ROWS, config.CALIBRATION_CHECKERBOARD_COLS, calibrate=False, alpha=0.9)
 
-    def extract_frames(self):
-        deeplabcut.extract_frames(self.currentConfigPath, "automatic", "uniform", crop=True)
+    def calibrate_camera_pairs(self):
+        dlc.calibrate_cameras(config.DLC_3D_PAIR_1_2_CONFIG_PATH, config.CALIBRATION_CHECKERBOARD_ROWS, config.CALIBRATION_CHECKERBOARD_COLS, calibrate=True, alpha=0.9)
+        dlc.calibrate_cameras(config.DLC_3D_PAIR_2_3_CONFIG_PATH, config.CALIBRATION_CHECKERBOARD_ROWS, config.CALIBRATION_CHECKERBOARD_COLS, calibrate=True, alpha=0.9)
+        dlc.calibrate_cameras(config.DLC_3D_PAIR_3_4_CONFIG_PATH, config.CALIBRATION_CHECKERBOARD_ROWS, config.CALIBRATION_CHECKERBOARD_COLS, calibrate=True, alpha=0.9)
+        dlc.calibrate_cameras(config.DLC_3D_PAIR_4_1_CONFIG_PATH, config.CALIBRATION_CHECKERBOARD_ROWS, config.CALIBRATION_CHECKERBOARD_COLS, calibrate=True, alpha=0.9)
 
-    def label_frames(self):
-        deeplabcut.label_frames(self.currentConfigPath)
+    def check_undistortion(self):
 
-    def check_labels(self):
-        deeplabcut.check_labels(self.currentConfigPath)
-
-    def create_training_dataset(self):
-        deeplabcut.create_training_dataset(self.currentConfigPath, num_shuffles=1)
-
-    def train_network(self):
-        deeplabcut.train_network(self.currentConfigPath, shuffle=1)
-
-    def evaluate_network(self):
-        deeplabcut.evaluate_network(self.currentConfigPath, plotting=True)
-
-    def analyze_videos(self):
-            deeplabcut.analyze_videos(self.currentConfigPath, config.VIDEOS_FOLDER, videoType=".avi", save_as_csv=True)
-
-    def filter_predictions(self):
-        deeplabcut.filterpredictions(self.currentConfigPath, "", shuffle=1)
-
-    def create_labeled_video(self):
-            deeplabcut.create_labeled_video(self.configPath, config.VIDEOS_FOLDER, filtered=True)
-
-    def plot_trajectories(self):
-            deeplabcut.plot_trajectories(self.currentConfigPath, config.VIDEOS_FOLDER, filtered=True)
-
-    def extract_outlier_frames(self):
-            deeplabcut.extract_outlier_frames(self.currentConfigPath, config.VIDEOS_FOLDER)
-
-    def refine_labels(self):
-        deeplabcut.refine_labels(self.currentConfigPath)
-
-    def merge_datasets(self):
-        deeplabcut.merge_datasets(self.currentConfigPath)
+        dlc.check_undistortion(config.DLC_3D_PAIR_1_2_CONFIG_PATH, config.CALIBRATION_CHECKERBOARD_ROWS, config.CALIBRATION_CHECKERBOARD_COLS)
+        dlc.check_undistortion(config.DLC_3D_PAIR_2_3_CONFIG_PATH, config.CALIBRATION_CHECKERBOARD_ROWS, config.CALIBRATION_CHECKERBOARD_COLS)
+        dlc.check_undistortion(config.DLC_3D_PAIR_3_4_CONFIG_PATH, config.CALIBRATION_CHECKERBOARD_ROWS, config.CALIBRATION_CHECKERBOARD_COLS)
+        dlc.check_undistortion(config.DLC_3D_PAIR_4_1_CONFIG_PATH, config.CALIBRATION_CHECKERBOARD_ROWS, config.CALIBRATION_CHECKERBOARD_COLS)

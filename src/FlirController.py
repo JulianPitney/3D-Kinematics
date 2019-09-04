@@ -32,7 +32,7 @@ def init_video_windows():
     windowNames = []
 
     for i in range(0, config.NUM_CAMERAS):
-        windowNames.append("cam" + str(i))
+        windowNames.append("cam" + str(i + 1))
         cv2.namedWindow(windowNames[i], cv2.WINDOW_NORMAL)
         cv2.resizeWindow(windowNames[i], 720, 540)
         cv2.moveWindow(windowNames[i], 720, 0)
@@ -61,9 +61,6 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
     readyToSave = False
     currentCameraIndex = 0
 
-    if config.DISPLAY_VIDEO_FEEDS:
-        windowNames = init_video_windows()
-
     mainQueue.put('READY')
 
     while True:
@@ -74,8 +71,10 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
             # Start recording signal
             if msg == 'START':
                 videoWriters = init_video_writers()
+                if config.DISPLAY_VIDEO_FEEDS:
+                    windowNames = init_video_windows()
+
                 readyToSave = True
-                print("SAVE_PROC: Starting save!")
             # Save frame request from capture process
             elif isinstance(msg, int) and readyToSave:
 
@@ -101,7 +100,9 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
                 for videoWriter in videoWriters:
                     videoWriter.release()
                 videoWriters = []
-                print("SAVE_PROC: Done saving!")
+                if config.DISPLAY_VIDEO_FEEDS:
+                    windowNames = []
+                    cv2.destroyAllWindows()
 
             # Exit application signal
             elif msg == 'SHUTDOWN':
@@ -124,6 +125,8 @@ class CameraController(object):
         self.system = None
         self.cameras = []
         self.nodemaps = []
+        self.cameraIDS = []
+
 
         # Spinnaker Initialization
         self.camList, self.system = self.init_spinnaker()
@@ -153,7 +156,6 @@ class CameraController(object):
             if not self.mainQueue.empty():
                 msg = self.mainQueue.get()
                 if msg == 'READY':
-                    print('CONFIRMED READY')
                     break
 
 
@@ -182,6 +184,11 @@ class CameraController(object):
 
     def initialize_camera(self, camera, configureTrigger, acquisitionMode):
 
+        # Retrieve TL device nodemap and print device information
+        nodemap_tldevice = camera.GetTLDeviceNodeMap()
+        cameraID = self.get_camera_id(nodemap_tldevice)
+        self.cameraIDS.append(cameraID)
+
         camera.Init()
         nodemap = camera.GetNodeMap()
         self.set_binning_mode(nodemap)
@@ -190,8 +197,8 @@ class CameraController(object):
         self.set_camera_gain(camera, config.GAIN)
         self.set_isp(nodemap, False)
         self.set_camera_fps(nodemap, config.FPS)
-        camera.OffsetX.SetValue(int((1440 - config.WIDTH) / 2))
-        camera.OffsetY.SetValue(int((1080 - config.HEIGHT) / 2))
+        #camera.OffsetX.SetValue(int((1440 - config.WIDTH) / 2))
+        #camera.OffsetY.SetValue(int((1080 - config.HEIGHT) / 2))
         # In order to access the node entries, they have to be casted to a pointer type (CEnumerationPtr here)
         node_acquisition_mode = PySpin.CEnumerationPtr(nodemap.GetNode('AcquisitionMode'))
         if not PySpin.IsAvailable(node_acquisition_mode) or not PySpin.IsWritable(node_acquisition_mode):
@@ -218,19 +225,60 @@ class CameraController(object):
         camera.DeInit()
         del camera
 
+    def print_device_info(self, nodemap):
+
+        print('*** DEVICE INFORMATION ***\n')
+
+        try:
+            result = True
+            node_device_information = PySpin.CCategoryPtr(nodemap.GetNode('DeviceInformation'))
+
+            if PySpin.IsAvailable(node_device_information) and PySpin.IsReadable(node_device_information):
+                features = node_device_information.GetFeatures()
+                for feature in features:
+                    node_feature = PySpin.CValuePtr(feature)
+                    print('%s: %s' % (node_feature.GetName(),
+                                      node_feature.ToString() if PySpin.IsReadable(
+                                          node_feature) else 'Node not readable'))
+
+            else:
+                print('Device control information not available.')
+
+        except PySpin.SpinnakerException as ex:
+            print('Error: %s' % ex)
+            return False
+
+        return result
+
+    def get_camera_id(self, nodemap):
+
+        node_device_information = PySpin.CCategoryPtr(nodemap.GetNode('DeviceInformation'))
+
+        if PySpin.IsAvailable(node_device_information) and PySpin.IsReadable(node_device_information):
+            features = node_device_information.GetFeatures()
+            for feature in features:
+                node_feature = PySpin.CValuePtr(feature)
+                if node_feature.GetName() == 'DeviceID':
+                    return node_feature.ToString()
+
+
+
+
+
+
     def set_resolution(self, nodemap, width, height):
 
         node_width = PySpin.CIntegerPtr(nodemap.GetNode('Width'))
         if PySpin.IsAvailable(node_width) and PySpin.IsWritable(node_width):
             node_width.SetValue(width)
         else:
-            print("Failed to set Width")
+            pass
 
         node_height = PySpin.CIntegerPtr(nodemap.GetNode('Height'))
         if PySpin.IsAvailable(node_height) and PySpin.IsWritable(node_height):
             node_height.SetValue(height)
         else:
-            print("Failed to set Height")
+            pass
 
     def set_camera_fps(self, nodemap, fps):
 
@@ -242,27 +290,23 @@ class CameraController(object):
 
         frameRateNode = PySpin.CFloatPtr(nodemap.GetNode("AcquisitionFrameRate"))
         if frameRateNode.GetAccessMode() != PySpin.RW:
-            print("Unable to set framerate!")
             return False
         else:
             frameRateNode.SetValue(fps)
-            print("Framerate set to " + str(fps))
 
     def set_camera_gain(self, camera, gain):
 
         if camera.GainAuto.GetAccessMode() != PySpin.RW:
-            print("Unable to set gain")
             return False
         else:
             camera.GainAuto.SetValue(PySpin.GainAuto_Off)
 
         if camera.Gain.GetAccessMode() != PySpin.RW:
-            print("Unable to set gain")
             return False
         else:
             gain = min(camera.Gain.GetMax(), gain)
             camera.Gain.SetValue(gain)
-            print("Gain set to " + str(gain))
+
 
 
 
@@ -274,13 +318,11 @@ class CameraController(object):
             camera.ExposureAuto.SetValue(PySpin.ExposureAuto_Off)
 
         if camera.ExposureTime.GetAccessMode() != PySpin.RW:
-            print("Unable to set exposure!")
             return False
         else:
             # Ensure desired exposure time does not exceed the maximum
             exposure = min(camera.ExposureTime.GetMax(), exposure)
             camera.ExposureTime.SetValue(exposure)
-            print("Exposure set to " + str(exposure))
 
     def set_binning_mode(self, nodemap):
 
@@ -331,7 +373,7 @@ class CameraController(object):
         ISPNode = PySpin.CEnumerationPtr(nodemap.GetNode('ISP Enable'))
 
         if not PySpin.IsAvailable(ISPNode) or not PySpin.IsReadable(ISPNode):
-            print("Failed to access ISP node!")
+            pass
         else:
             ISPNode.SetIntValue(ISPMode)
 
@@ -363,7 +405,7 @@ class CameraController(object):
         """
         try:
             result = True
-            print('\n*** CONFIGURING CHUNK DATA ***\n')
+            #print('\n*** CONFIGURING CHUNK DATA ***\n')
 
             # Activate chunk mode
             #
@@ -376,7 +418,7 @@ class CameraController(object):
             if PySpin.IsAvailable(chunk_mode_active) and PySpin.IsWritable(chunk_mode_active):
                 chunk_mode_active.SetValue(True)
 
-            print('Chunk mode activated...')
+            #print('Chunk mode activated...')
 
             # Enable all types of chunk data
             #
@@ -407,7 +449,7 @@ class CameraController(object):
             entries = [PySpin.CEnumEntryPtr(chunk_selector_entry) for chunk_selector_entry in
                        chunk_selector.GetEntries()]
 
-            print('Enabling entries...')
+            #print('Enabling entries...')
 
             # Iterate through our list and select each entry node to enable
             for chunk_selector_entry in entries:
@@ -424,15 +466,16 @@ class CameraController(object):
 
                 # Enable the boolean, thus enabling the corresponding chunk data
                 if not PySpin.IsAvailable(chunk_enable):
-                    print('{} not available'.format(chunk_str))
+                    #print('{} not available'.format(chunk_str))
                     result = False
                 elif chunk_enable.GetValue() is True:
-                    print('{} enabled'.format(chunk_str))
+                    #print('{} enabled'.format(chunk_str))
+                    pass
                 elif PySpin.IsWritable(chunk_enable):
                     chunk_enable.SetValue(True)
-                    print('{} enabled'.format(chunk_str))
+                    #print('{} enabled'.format(chunk_str))
                 else:
-                    print('{} not writable'.format(chunk_str))
+                    #print('{} not writable'.format(chunk_str))
                     result = False
 
         except PySpin.SpinnakerException as ex:
@@ -565,7 +608,7 @@ class CameraController(object):
             #print("CAM2 " + str(ts2b - ts2))
         """
 
-    def synchronous_picture(self):
+    def take_synchronous_calibration_pictures(self):
 
         numPicsToTake = int(input("Enter number of pairs to take: "))
         windowNames = init_video_windows()
@@ -574,11 +617,35 @@ class CameraController(object):
 
             self.arduinoController.start_pulses(1)
             for camIndex in range(0, config.NUM_CAMERAS):
+
+                cameraNumber = None
+                cameraID = self.cameraIDS[camIndex]
+                if cameraID == config.CAMERA_1_ID:
+                    cameraNumber = '1'
+                elif cameraID == config.CAMERA_2_ID:
+                    cameraNumber = '2'
+                elif cameraID == config.CAMERA_3_ID:
+                    cameraNumber = '3'
+                elif cameraID == config.CAMERA_4_ID:
+                    cameraNumber = '4'
+
                 img_result = self.cameras[camIndex].GetNextImage()
                 img_result = img_result.GetNDArray()
-                cv2.imshow(windowNames[camIndex], img_result)
+                cv2.imshow(windowNames[int(cameraNumber) - 1], img_result)
 
-                cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER + "/camera-" + str(camIndex + 1) + "-%02d" % (i + 1) + '.jpg', img_result)
+                if cameraNumber == '1':
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_1_2 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_4_1 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
+                elif cameraNumber == '2':
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_1_2 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_2_3 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
+                elif cameraNumber == '3':
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_2_3 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_3_4 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
+                elif cameraNumber == '4':
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_3_4 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_4_1 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
+
             cv2.waitKey(0)
 
         cv2.destroyAllWindows()
