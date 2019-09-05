@@ -10,7 +10,8 @@ MENU_MSG = """Select Function:
 [3] Detect Calibration Patterns
 [4] Calibrate Camera Pairs
 [5] Check Undistortion
-[6] Exit
+[6] Analyze Videos
+[7] Exit
 Input: """
 
 
@@ -48,16 +49,16 @@ DISPLAY_VIDEO_FEEDS = True
 
 
 # DLC CONFIG
-DLC_3D_PAIR_1_2_CONFIG_PATH = "C:/Projects/3D-Kinematics/DLC_PROJECTS/openfield-julian-2019-08-21-3d_pair1-2/config.yaml"
-DLC_3D_PAIR_2_3_CONFIG_PATH = "C:/Projects/3D-Kinematics/DLC_PROJECTS/openfield-julian-2019-08-21-3d_pair2-3/config.yaml"
-DLC_3D_PAIR_3_4_CONFIG_PATH = "C:/Projects/3D-Kinematics/DLC_PROJECTS/openfield-julian-2019-08-21-3d_pair3-4/config.yaml"
-DLC_3D_PAIR_4_1_CONFIG_PATH = "C:/Projects/3D-Kinematics/DLC_PROJECTS/openfield-julian-2019-08-21-3d_pair4-1/config.yaml"
-CALIBRATION_IMAGES_FOLDER_PAIR_1_2 = "C:/Projects/3D-Kinematics/DLC_PROJECTS/openfield-julian-2019-08-21-3d_pair1-2/calibration_images"
-CALIBRATION_IMAGES_FOLDER_PAIR_2_3 = "C:/Projects/3D-Kinematics/DLC_PROJECTS/openfield-julian-2019-08-21-3d_pair2-3/calibration_images"
-CALIBRATION_IMAGES_FOLDER_PAIR_3_4 = "C:/Projects/3D-Kinematics/DLC_PROJECTS/openfield-julian-2019-08-21-3d_pair3-4/calibration_images"
-CALIBRATION_IMAGES_FOLDER_PAIR_4_1 = "C:/Projects/3D-Kinematics/DLC_PROJECTS/openfield-julian-2019-08-21-3d_pair4-1/calibration_images"
-VIDEOS_FOLDER = "C:/Projects/3D-Kinematics/videos"
-PROJECTS_FOLDER = "C:/Projects/3D-Kinematics/DLC_PROJECTS"
+DLC_3D_PAIR_1_2_CONFIG_PATH = "C:\\Projects\\3D-Kinematics\\DLC_PROJECTS\\openfield-julian-2019-08-21-3d_pair1-2\\config.yaml"
+DLC_3D_PAIR_2_3_CONFIG_PATH = "C:\\Projects\\3D-Kinematics\\DLC_PROJECTS\\openfield-julian-2019-08-21-3d_pair2-3\\config.yaml"
+DLC_3D_PAIR_3_4_CONFIG_PATH = "C:\\Projects\\3D-Kinematics\\DLC_PROJECTS\\openfield-julian-2019-08-21-3d_pair3-4\\config.yaml"
+DLC_3D_PAIR_4_1_CONFIG_PATH = "C:\\Projects\\3D-Kinematics\\DLC_PROJECTS\\openfield-julian-2019-08-21-3d_pair4-1\\config.yaml"
+CALIBRATION_IMAGES_FOLDER_PAIR_1_2 = "C:\\Projects\\3D-Kinematics\\DLC_PROJECTS\\openfield-julian-2019-08-21-3d_pair1-2\\calibration_images"
+CALIBRATION_IMAGES_FOLDER_PAIR_2_3 = "C:\\Projects\\3D-Kinematics\\DLC_PROJECTS\\openfield-julian-2019-08-21-3d_pair2-3\\calibration_images"
+CALIBRATION_IMAGES_FOLDER_PAIR_3_4 = "C:\\Projects\\3D-Kinematics\\DLC_PROJECTS\\openfield-julian-2019-08-21-3d_pair3-4\\calibration_images"
+CALIBRATION_IMAGES_FOLDER_PAIR_4_1 = "C:\\Projects\\3D-Kinematics\\DLC_PROJECTS\\openfield-julian-2019-08-21-3d_pair4-1\\calibration_images"
+VIDEOS_FOLDER = "C:\\Projects\\3D-Kinematics\\videos"
+PROJECTS_FOLDER = "C:\\Projects\\3D-Kinematics\\DLC_PROJECTS"
 
 # DIRECTORY STRUCTURE CHECKS
 if not os.path.isdir(PROJECTS_FOLDER + "/../videos"):

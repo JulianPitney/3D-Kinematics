@@ -8,7 +8,7 @@ def main():
     dlcWrapper = dlc.DLC2Wrapper()
     flirController = fc.CameraController()
     menuFunctions = [flirController.synchronous_record, flirController.take_synchronous_calibration_pictures, dlcWrapper.detect_calibration_patterns, dlcWrapper.calibrate_camera_pairs,
-                     dlcWrapper.check_undistortion, exit]
+                     dlcWrapper.check_undistortion, dlcWrapper.analyze_videos, exit]
 
     while True:
 
