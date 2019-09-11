@@ -32,7 +32,7 @@ def init_video_windows():
     windowNames = []
 
     for i in range(0, config.NUM_CAMERAS):
-        windowNames.append("cam" + str(i + 1))
+        windowNames.append("cam" + str(i))
         cv2.namedWindow(windowNames[i], cv2.WINDOW_NORMAL)
         cv2.resizeWindow(windowNames[i], 720, 540)
         cv2.moveWindow(windowNames[i], 720, 0)
@@ -69,32 +69,28 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
             msg = queue.get()
 
             # Start recording signal
-            if msg == 'START':
+            if msg[0] == 'START':
                 videoWriters = init_video_writers()
                 if config.DISPLAY_VIDEO_FEEDS:
                     windowNames = init_video_windows()
 
                 readyToSave = True
             # Save frame request from capture process
-            elif isinstance(msg, int) and readyToSave:
+            elif isinstance(msg[0], int) and readyToSave:
 
-                bufferIndex = msg
+                bufferIndex = msg[0]
+                currentCameraIndex = msg[1]
                 frame = sharedFrameBuffer[bufferIndex]
                 videoWriters[currentCameraIndex].write(frame)
                 if config.DISPLAY_VIDEO_FEEDS:
                     cv2.imshow(windowNames[currentCameraIndex], frame)
                     cv2.waitKey(1)
 
-                currentCameraIndex += 1
-                if currentCameraIndex >= config.NUM_CAMERAS:
-                    currentCameraIndex = 0
-
                 sharedFramesSavedCounter[0][0] += 1
 
             # End of recording signal from capture process. Reset.
-            elif msg == 'END':
+            elif msg[0] == 'END':
 
-                currentCameraIndex = 0
                 sharedFramesSavedCounter[0][0] = 0
                 readyToSave = False
                 for videoWriter in videoWriters:
@@ -105,7 +101,7 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
                     cv2.destroyAllWindows()
 
             # Exit application signal
-            elif msg == 'SHUTDOWN':
+            elif msg[0] == 'SHUTDOWN':
                 cv2.destroyAllWindows()
                 for videoWriter in videoWriters:
                     videoWriter.release()
@@ -123,17 +119,37 @@ class CameraController(object):
         self.CHOSEN_TRIGGER = TriggerType.HARDWARE
         self.camList = None
         self.system = None
-        self.cameras = []
-        self.nodemaps = []
-        self.cameraIDS = []
+        self.cameras = [None] * config.NUM_CAMERAS
+        self.nodemaps = [None] * config.NUM_CAMERAS
+        self.cameraIDS = [None] * config.NUM_CAMERAS
 
 
         # Spinnaker Initialization
         self.camList, self.system = self.init_spinnaker()
         for i in range(0, len(self.camList)):
-            camera, nodemap = self.init_video_stream(i)
-            self.cameras.append(camera)
-            self.nodemaps.append(nodemap)
+
+            camera, nodemap, cameraID = self.init_video_stream(i)
+
+            if cameraID == config.CAMERA_0_ID:
+                self.cameras[0] = camera
+                self.nodemaps[0] = nodemap
+                self.cameraIDS[0] = cameraID
+            elif cameraID == config.CAMERA_1_ID:
+                self.cameras[1] = camera
+                self.nodemaps[1] = nodemap
+                self.cameraIDS[1] = cameraID
+            elif cameraID == config.CAMERA_2_ID:
+                self.cameras[2] = camera
+                self.nodemaps[2] = nodemap
+                self.cameraIDS[2] = cameraID
+            elif cameraID == config.CAMERA_3_ID:
+                self.cameras[3] = camera
+                self.nodemaps[3] = nodemap
+                self.cameraIDS[3] = cameraID
+            else:
+                print("Camera with ID: " + str(cameraID) + " is not registered in the config file!")
+                exit(0)
+
 
         if len(self.camList) != config.NUM_CAMERAS:
             print("Assertion Error: config.NUM_CAMERAS does not match number of attached cameras!")
@@ -165,7 +181,7 @@ class CameraController(object):
         for i in range(0, len(self.camList)):
             self.deinitialize_camera(self.cameras[i], self.nodemaps[i])
 
-        self.saveProcQueue.put('SHUTDOWN')
+        self.saveProcQueue.put(['SHUTDOWN', None])
         self.saveProc.join()
 
 
@@ -177,17 +193,14 @@ class CameraController(object):
 
     def init_video_stream(self, cameraIndex):
         camera = self.camList.GetByIndex(cameraIndex)
+        nodemap_tldevice = camera.GetTLDeviceNodeMap()
+        cameraID = self.get_camera_id(nodemap_tldevice)
         nodemap = self.initialize_camera(camera, True, 'Continuous')
         self.configure_chunk_data(nodemap)
         camera.BeginAcquisition()
-        return camera, nodemap
+        return camera, nodemap, cameraID
 
     def initialize_camera(self, camera, configureTrigger, acquisitionMode):
-
-        # Retrieve TL device nodemap and print device information
-        nodemap_tldevice = camera.GetTLDeviceNodeMap()
-        cameraID = self.get_camera_id(nodemap_tldevice)
-        self.cameraIDS.append(cameraID)
 
         camera.Init()
         nodemap = camera.GetNodeMap()
@@ -575,7 +588,7 @@ class CameraController(object):
 
         sharedFrameBufferIndex = 0
         numFramesToAcquire = int(config.MAX_TRIGGERED_FPS * config.RECORDING_DURATION_S)
-        self.saveProcQueue.put('START')
+        self.saveProcQueue.put(['START', None])
         self.arduinoController.start_pulses(numFramesToAcquire)
         #timestamps = [[], [], [], []]
 
@@ -591,13 +604,13 @@ class CameraController(object):
                 img_result = self.cameras[camIndex].GetNextImage()
                 #timestamps[camIndex].append(self.display_chunk_data_from_image(img_result))
                 self.sharedFrameBuffer[sharedFrameBufferIndex] = img_result.GetNDArray()
-                self.saveProcQueue.put(sharedFrameBufferIndex)
+                self.saveProcQueue.put([sharedFrameBufferIndex, camIndex])
                 img_result.Release()
                 sharedFrameBufferIndex += 1
                 if sharedFrameBufferIndex == config.MAX_FRAMES_IN_BUFFER:
                     sharedFrameBufferIndex = 0
         # Let the save process know this recording is done so it should reset all it's shared memory counters
-        self.saveProcQueue.put('END')
+        self.saveProcQueue.put(['END', None])
         """
         for i in range(0 , len(timestamps[0]) - 1):
             ts1 = timestamps[0][i]
@@ -618,33 +631,22 @@ class CameraController(object):
             self.arduinoController.start_pulses(1)
             for camIndex in range(0, config.NUM_CAMERAS):
 
-                cameraNumber = None
-                cameraID = self.cameraIDS[camIndex]
-                if cameraID == config.CAMERA_1_ID:
-                    cameraNumber = '1'
-                elif cameraID == config.CAMERA_2_ID:
-                    cameraNumber = '2'
-                elif cameraID == config.CAMERA_3_ID:
-                    cameraNumber = '3'
-                elif cameraID == config.CAMERA_4_ID:
-                    cameraNumber = '4'
-
                 img_result = self.cameras[camIndex].GetNextImage()
                 img_result = img_result.GetNDArray()
-                cv2.imshow(windowNames[int(cameraNumber) - 1], img_result)
+                cv2.imshow(windowNames[camIndex], img_result)
 
-                if cameraNumber == '1':
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_1_2 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_4_1 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
-                elif cameraNumber == '2':
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_1_2 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_2_3 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
-                elif cameraNumber == '3':
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_2_3 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_3_4 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
-                elif cameraNumber == '4':
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_3_4 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_4_1 + "/camera-" + cameraNumber + "-%02d" % (i + 1) + '.jpg', img_result)
+                if camIndex == 0:
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_0_1 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_3_0 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
+                elif camIndex == 1:
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_0_1 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_1_2 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
+                elif camIndex == 2:
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_1_2 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_2_3 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
+                elif camIndex == 3:
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_2_3 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
+                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_3_0 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
 
             cv2.waitKey(0)
 
