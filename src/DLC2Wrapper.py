@@ -59,7 +59,7 @@ class DLC2Wrapper(object):
 
     def analyze_videos(self):
 
-        """
+
         for i in range(0, config.NUM_CAMERAS):
             os.system('ffmpeg -f rawvideo -pix_fmt gray -video_size ' + str(config.WIDTH) + 'x' + str(
                 config.HEIGHT) + ' -framerate ' +
@@ -83,13 +83,12 @@ class DLC2Wrapper(object):
         os.mkdir(config.VIDEOS_FOLDER + "\\pair3-0")
         shutil.copyfile(config.VIDEOS_FOLDER + "\\output3.mp4", config.VIDEOS_FOLDER + "\\pair3-0\\camera-3-output.mp4")
         shutil.copyfile(config.VIDEOS_FOLDER + "\\output0.mp4", config.VIDEOS_FOLDER + "\\pair3-0\\camera-0-output.mp4")
-        """
 
 
-        dlc.triangulate(config.DLC_3D_PAIR_0_1_CONFIG_PATH, config.VIDEOS_FOLDER + "\\pair0-1", videotype='.mp4', save_as_csv=True)
-        dlc.triangulate(config.DLC_3D_PAIR_1_2_CONFIG_PATH, config.VIDEOS_FOLDER + "\\pair1-2", videotype='.mp4', save_as_csv=True)
-        dlc.triangulate(config.DLC_3D_PAIR_2_3_CONFIG_PATH, config.VIDEOS_FOLDER + "\\pair2-3", videotype='.mp4', save_as_csv=True)
-        dlc.triangulate(config.DLC_3D_PAIR_3_0_CONFIG_PATH, config.VIDEOS_FOLDER + "\\pair3-0", videotype='.mp4', save_as_csv=True)
+        dlc.triangulate(config.DLC_3D_PAIR_0_1_CONFIG_PATH, config.VIDEOS_FOLDER + "\\pair0-1", videotype='.mp4', filterpredictions=True, filtertype='arima', save_as_csv=True)
+        dlc.triangulate(config.DLC_3D_PAIR_1_2_CONFIG_PATH, config.VIDEOS_FOLDER + "\\pair1-2", videotype='.mp4', filterpredictions=True, filtertype='arima', save_as_csv=True)
+        dlc.triangulate(config.DLC_3D_PAIR_2_3_CONFIG_PATH, config.VIDEOS_FOLDER + "\\pair2-3", videotype='.mp4', filterpredictions=True, filtertype='arima', save_as_csv=True)
+        dlc.triangulate(config.DLC_3D_PAIR_3_0_CONFIG_PATH, config.VIDEOS_FOLDER + "\\pair3-0", videotype='.mp4', filterpredictions=True, filtertype='arima', save_as_csv=True)
 
 
 
