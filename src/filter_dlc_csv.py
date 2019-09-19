@@ -6,13 +6,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 from time import sleep
+import pclpy
 
 csvPath = None
 dirPath = None
 videoPath = None
 
 
-if len(sys.argv) < 3:
+if len(sys.argv) < 2:
     print("Not enough args...")
 else:
     csvPath = sys.argv[1]
@@ -96,11 +97,12 @@ def get_xyz_vals():
 
 def plot_dlc_3d(frame_vals):
 
+
     cap = cv2.VideoCapture(videoPath)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-
+    framenum = 1
     for frame in frame_vals:
 
         plt.cla()
@@ -118,8 +120,60 @@ def plot_dlc_3d(frame_vals):
         ret, frame = cap.read()
         cv2.imshow('vid',frame)
         cv2.waitKey(1)
+        print(str(framenum))
+        framenum += 1
 
 
-filter_dlc_3d_csv()
+
+def convert_dlc3d_csv_to_pcd(frame_vals):
+
+    pcd_header = """# .PCD v.7 - Point Cloud Data file format
+VERSION .7
+FIELDS x y z
+SIZE 8 8 8
+TYPE F F F
+COUNT 1 1 1
+WIDTH 19
+HEIGHT 1
+VIEWPOINT 0 0 0 1 0 0 0
+POINTS 19
+DATA ascii
+"""
+
+    # Outer list represents frames, while inner list contains all 19 points for that frame.
+    # Each point has an x,y and z value.
+    frame_points = []
+    points = []
+
+    for frame in frame_vals:
+
+        for i in range(0, len(frame[0])):
+
+            x = frame[0][i]
+            y = frame[1][i]
+            z = frame[2][i]
+            points.append((x,y,z))
+
+        frame_points.append(points)
+        points = []
+
+    for frame in frame_points:
+
+        with open('test.pcd', 'w') as pcd_file:
+
+            pcd_file.write(pcd_header)
+
+            for point in frame:
+                pcd_file.write(str(point[0]) + " " + str(point[1]) + " " + str(point[2]) + "\n")
+
+        # Each frame gets it's own .pcd file containing all the points for that frame.
+        # We don't want to generate thousands of files so exit after 1 frame.
+        exit()
+
+
+
+
+
 frame_vals = get_xyz_vals()
-plot_dlc_3d(frame_vals)
+#plot_dlc_3d(frame_vals)
+convert_dlc3d_csv_to_pcd(frame_vals)
