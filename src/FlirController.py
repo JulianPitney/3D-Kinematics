@@ -6,7 +6,6 @@ import numpy as np
 from ctypes import sizeof, c_uint8, c_uint64
 from mmap import mmap
 import multiprocessing as mp
-from time import sleep
 
 class TriggerType:
     SOFTWARE = 1
