@@ -4,4 +4,4 @@
 *.buffer
 .idea/
 /anipose_experiments/
-*/__pycache__
+/src/__pycache__/
