@@ -40,14 +40,14 @@ def init_video_windows():
 
 
 
-def init_video_writers():
+def init_video_writers(path):
 
     videoWriters = []
 
     for i in range(0, config.NUM_CAMERAS):
-        vidName = "/output" + str(i) + ".yuv"
+        vidName = "\\camera" + str(i) + ".yuv"
         videoWriters.append(
-            cv2.VideoWriter(config.VIDEOS_FOLDER + vidName, cv2.CAP_FFMPEG, 0, config.MAX_TRIGGERED_FPS, (config.WIDTH, config.HEIGHT), False))
+            cv2.VideoWriter(path + vidName, cv2.CAP_FFMPEG, 0, config.MAX_TRIGGERED_FPS, (config.WIDTH, config.HEIGHT), False))
     return videoWriters
 
 
@@ -69,7 +69,8 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
 
             # Start recording signal
             if msg[0] == 'START':
-                videoWriters = init_video_writers()
+                videoPath = msg[1]
+                videoWriters = init_video_writers(videoPath)
                 if config.DISPLAY_VIDEO_FEEDS:
                     windowNames = init_video_windows()
 
@@ -114,6 +115,7 @@ class CameraController(object):
 
     def __init__(self):
 
+        print("Initializing, please wait...\n(This will take a while if <MAX_FRAME_BUFFER_SIZE_MB> is set to a large value in config.py)")
         self.arduinoController = ac.ArduinoController()
         self.CHOSEN_TRIGGER = TriggerType.HARDWARE
         self.camList = None
@@ -173,6 +175,7 @@ class CameraController(object):
                 if msg == 'READY':
                     break
 
+        print("Initialization complete!")
 
 
     def __del__(self):
@@ -583,11 +586,12 @@ class CameraController(object):
         return result
 
 
-    def synchronous_record(self):
+    def synchronous_record(self, path):
 
+        print("Beginning recording...")
         sharedFrameBufferIndex = 0
         numFramesToAcquire = int(config.MAX_TRIGGERED_FPS * config.RECORDING_DURATION_S)
-        self.saveProcQueue.put(['START', None])
+        self.saveProcQueue.put(['START', path])
         self.arduinoController.start_pulses(numFramesToAcquire)
         #timestamps = [[], [], [], []]
 
@@ -621,3 +625,4 @@ class CameraController(object):
         """
 
         cv2.destroyAllWindows()
+        print("Recording completed!\n")

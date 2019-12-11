@@ -3,5 +3,5 @@
 *.pyc
 *.buffer
 .idea/
-/anipose_experiments/
+/anipose/
 __pycache__/

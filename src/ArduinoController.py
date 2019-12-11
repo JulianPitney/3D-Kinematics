@@ -38,7 +38,6 @@ class ArduinoController(object):
 		while(1):
 			confirmation = self.serialInterface.readline().decode()
 			if confirmation == "ARDUINO READY\n":
-				print(confirmation)
 				break
 			else:
 				print("No response from arduino!")
