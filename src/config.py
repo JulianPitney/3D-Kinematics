@@ -1,13 +1,5 @@
 import os
 
-# MAIN MENU
-# STRINGS
-MENU_MSG = """Select Function:
-[1] Record Video
-[2] Take Calibration Pictures
-[3] Exit
-Input: """
-
 
 # ARDUINO CONFIG
 SERIAL_PORT_PATH = "COM3"
@@ -19,10 +11,8 @@ CAMERA_0_ID = '19276766'
 CAMERA_1_ID = '19194610'
 CAMERA_2_ID = '19276765'
 CAMERA_3_ID = '18474728'
-CALIBRATION_CHECKERBOARD_ROWS = 9
-CALIBRATION_CHECKERBOARD_COLS = 12
 
-
+# RECORDING CONFIG
 FPS = 60
 EXPOSURE = 1000
 GAIN = 17
@@ -39,12 +29,5 @@ MAX_FRAMES_IN_BUFFER = int(MAX_FRAME_BUFFER_SIZE_MB / ((WIDTH * HEIGHT) / 100000
 DISPLAY_VIDEO_FEEDS = True
 
 
-VIDEOS_FOLDER = "C:\\Projects\\3D-Kinematics\\videos"
+VIDEOS_FOLDER = "C:\\Projects\\3D-Kinematics\\anipose_experiments"
 PROJECTS_FOLDER = "C:\\Projects\\3D-Kinematics\\DLC_PROJECTS"
-
-# DIRECTORY STRUCTURE CHECKS
-if not os.path.isdir(PROJECTS_FOLDER + "/../videos"):
-    os.mkdir(PROJECTS_FOLDER + "/../videos")
-
-if not os.path.isdir(PROJECTS_FOLDER + "/../DLC_PROJECTS"):
-    os.mkdir(PROJECTS_FOLDER + "/../DLC_PROJECTS")

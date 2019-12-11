@@ -620,33 +620,4 @@ class CameraController(object):
             #print("CAM2 " + str(ts2b - ts2))
         """
 
-    def take_synchronous_calibration_pictures(self):
-
-        numPicsToTake = int(input("Enter number of pairs to take: "))
-        windowNames = init_video_windows()
-
-        for i in range(0, numPicsToTake):
-
-            self.arduinoController.start_pulses(1)
-            for camIndex in range(0, config.NUM_CAMERAS):
-
-                img_result = self.cameras[camIndex].GetNextImage()
-                img_result = img_result.GetNDArray()
-                cv2.imshow(windowNames[camIndex], img_result)
-
-                if camIndex == 0:
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_0_1 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_3_0 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
-                elif camIndex == 1:
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_0_1 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_1_2 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
-                elif camIndex == 2:
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_1_2 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_2_3 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
-                elif camIndex == 3:
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_2_3 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
-                    cv2.imwrite(config.CALIBRATION_IMAGES_FOLDER_PAIR_3_0 + "/camera-" + str(camIndex) + "-%02d" % (i + 1) + '.jpg', img_result)
-
-            cv2.waitKey(0)
-
         cv2.destroyAllWindows()

@@ -1,1 +1,0 @@
-conda activate flir-env && cd "C:\Projects\3D-Kinematics\src\" && python main.py
