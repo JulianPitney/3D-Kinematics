@@ -60,7 +60,10 @@ def main():
                 os.system("conda activate dlc-windowsGPU && anipose analyze")
                 os.system("conda activate dlc-windowsGPU && anipose filter")
                 os.system("conda activate dlc-windowsGPU && anipose triangulate")
+                os.system("conda activate dlc-windowsGPU && anipose label-2d")
+                os.system("conda activate dlc-windowsGPU && anipose label-3d")
                 os.system("conda activate dlc-windowsGPU && anipose label-combined")
+
 
 
 
