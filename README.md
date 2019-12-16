@@ -22,14 +22,14 @@ The goal of this project is to provide a system that generates meaningful "graph
 * [License](#license)
 
 
-#Installation
+# Installation
 stuff for install
-#Usage
+# Usage
 stuff for using
-#Contributing
+# Contributing
 stuff for contrib
-#Credits
+# Credits
 credz
-#License
+# License
 legalstuf
 
