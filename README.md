@@ -23,6 +23,11 @@ The goal of this project is to provide a system that generates meaningful "graph
 
 
 # Installation
+
+**Hardware:**<br/>
+[Parts List](https://docs.google.com/spreadsheets/d/18pRoh0PZBaclofkvuCLl1aGt24ObCIeX1hrV7fQlwLQ/edit?usp=sharing)
+
+
 **Dependencies**
 
 Name | Version
@@ -50,19 +55,20 @@ PySerial | 3.4
 7. Install the Spinnaker Python API inside ``flir-env`` by downloading [this]() folder and following the instructions in the README.txt contained within. 
 8. Down and install FFmpeg from [here](https://www.ffmpeg.org/download.html#releases) and add the bin folder to your Windows system path.
 9. Clone this repository.
+
 # Usage
 
 1. Open a terminal and type ``conda activate flir-env``
 2. Type ``python kinarena.py``
-3. Select 1 to record a trial.
-4. Select 2 to analyze the trial. 
+3. Select ``[2] New Trial`` to record a trial. For every trial a folder will be generated under ``~/anipose/experiments/<trial_name>``. 
+4. At any time, you can select ``[3] Analyze Trials`` to automatically analyze all trials that have not yet been analyzed. Analysis takes a long time so don't do this until you're done recording and ready to walk away for the day.
 
 # Contributing
 Not ready for outside contribution.
 # Credits
 * [DeepLabCut authors](http://www.mousemotorlab.org/deeplabcut)
 * [anipose authors](https://github.com/lambdaloop)
-* [Boyand Wang](jwang149@gmail.com)
+* [Boyang Wang](jwang149@gmail.com)
 * [Bergeron Lab](jwang149@gmail.com)
 * [Julian Pitney](www.julianpitney.com)
 
