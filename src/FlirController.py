@@ -34,7 +34,11 @@ def init_video_windows():
         windowNames.append("cam" + str(i))
         cv2.namedWindow(windowNames[i], cv2.WINDOW_NORMAL)
         cv2.resizeWindow(windowNames[i], 720, 540)
-        cv2.moveWindow(windowNames[i], 720, 0)
+
+    cv2.moveWindow(windowNames[0], 0, 0)
+    cv2.moveWindow(windowNames[1], 720, 0)
+    cv2.moveWindow(windowNames[2], 0, 640)
+    cv2.moveWindow(windowNames[3], 720, 640)
 
     return windowNames
 
@@ -82,8 +86,8 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
                 bufferIndex = msg[0]
                 currentCameraIndex = msg[1]
                 frame = sharedFrameBuffer[bufferIndex]
-                r = 640.0 / frame.shape[1]
-                dim = (640, int(frame.shape[0] * r))
+                r = config.PREVIEW_WINDOW_FRAME_WIDTH / frame.shape[1]
+                dim = (config.PREVIEW_WINDOW_FRAME_WIDTH, int(frame.shape[0] * r))
                 if config.RECORD_VIDEO:
                     videoWriters[currentCameraIndex].write(frame)
                 if config.DISPLAY_VIDEO_FEEDS:
