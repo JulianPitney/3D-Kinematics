@@ -70,7 +70,8 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
             # Start recording signal
             if msg[0] == 'START':
                 videoPath = msg[1]
-                videoWriters = init_video_writers(videoPath)
+                if config.RECORD_VIDEO:
+                    videoWriters = init_video_writers(videoPath)
                 if config.DISPLAY_VIDEO_FEEDS:
                     windowNames = init_video_windows()
 
@@ -81,7 +82,8 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
                 bufferIndex = msg[0]
                 currentCameraIndex = msg[1]
                 frame = sharedFrameBuffer[bufferIndex]
-                videoWriters[currentCameraIndex].write(frame)
+                if config.RECORD_VIDEO:
+                    videoWriters[currentCameraIndex].write(frame)
                 if config.DISPLAY_VIDEO_FEEDS:
                     cv2.imshow(windowNames[currentCameraIndex], frame)
                     cv2.waitKey(1)
@@ -93,8 +95,9 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
 
                 sharedFramesSavedCounter[0][0] = 0
                 readyToSave = False
-                for videoWriter in videoWriters:
-                    videoWriter.release()
+                if config.RECORD_VIDEO:
+                    for videoWriter in videoWriters:
+                        videoWriter.release()
                 videoWriters = []
                 if config.DISPLAY_VIDEO_FEEDS:
                     windowNames = []
@@ -103,8 +106,9 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
             # Exit application signal
             elif msg[0] == 'SHUTDOWN':
                 cv2.destroyAllWindows()
-                for videoWriter in videoWriters:
-                    videoWriter.release()
+                if config.RECORD_VIDEO:
+                    for videoWriter in videoWriters:
+                        videoWriter.release()
                 return 0
 
 
