@@ -82,10 +82,14 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
                 bufferIndex = msg[0]
                 currentCameraIndex = msg[1]
                 frame = sharedFrameBuffer[bufferIndex]
+                r = 640.0 / frame.shape[1]
+                dim = (640, int(frame.shape[0] * r))
                 if config.RECORD_VIDEO:
                     videoWriters[currentCameraIndex].write(frame)
                 if config.DISPLAY_VIDEO_FEEDS:
-                    cv2.imshow(windowNames[currentCameraIndex], frame)
+
+                    resized = cv2.resize(frame, dim, interpolation=cv2.INTER_AREA)
+                    cv2.imshow(windowNames[currentCameraIndex], resized)
                     cv2.waitKey(1)
 
                 sharedFramesSavedCounter[0][0] += 1
