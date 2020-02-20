@@ -37,8 +37,8 @@ def init_video_windows():
 
     cv2.moveWindow(windowNames[0], 0, 0)
     cv2.moveWindow(windowNames[1], 720, 0)
-    cv2.moveWindow(windowNames[2], 0, 640)
-    cv2.moveWindow(windowNames[3], 720, 640)
+    cv2.moveWindow(windowNames[2], 0, 540)
+    cv2.moveWindow(windowNames[3], 720, 540)
 
     return windowNames
 
