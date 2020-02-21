@@ -634,11 +634,11 @@ class CameraController(object):
 
     def synchronous_record(self, path):
 
-        print("Beginning recording...")
         sharedFrameBufferIndex = 0
         if path == "LIVE_FEED_000XX00XX":
             numFramesToAcquire = 2000000
         else:
+            print("Beginning recording...")
             numFramesToAcquire = int(config.MAX_TRIGGERED_FPS * config.RECORDING_DURATION_S)
 
         self.saveProcQueue.put(['START', path])
