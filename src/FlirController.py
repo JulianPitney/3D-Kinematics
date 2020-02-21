@@ -40,10 +40,19 @@ def init_video_writers(path):
 
 def downsample_and_merge_feeds(frames):
 
-    #r = config.PREVIEW_WINDOW_FRAME_WIDTH / frame.shape[1]
-    #dim = (config.PREVIEW_WINDOW_FRAME_WIDTH, int(frame.shape[0] * r))
-    #resized = cv2.resize(frame, dim, interpolation=cv2.INTER_AREA)
-    pass
+    r = 720.0 / frames[0].shape[1]
+    dim = (720, int(frames[0].shape[0] * r))
+
+    resizedFrames = []
+    for frame in frames:
+         resizedFrames.append(cv2.resize(frame, dim, interpolation=cv2.INTER_AREA))
+
+    top = np.concatenate((resizedFrames[0], resizedFrames[1]), axis=1)
+    bottom = np.concatenate((resizedFrames[2], resizedFrames[3]), axis=1)
+    merged = np.concatenate((top, bottom), axis=0)
+    cv2.imshow("live_feed", merged)
+    cv2.waitKey(0)
+    return [None, None, None, None]
 
 
 def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
@@ -54,6 +63,7 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
     readyToSave = False
     currentCameraIndex = 0
     selectedCameraFeed = 0
+    spliceFrames = [None, None, None, None]
     mainQueue.put('READY')
 
     while True:
@@ -86,6 +96,7 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
                     cv2.moveWindow("live_feed", 0, 0)
 
                 readyToSave = True
+
             # Save frame request from capture process
             elif isinstance(msg[0], int) and readyToSave:
 
@@ -101,6 +112,12 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
                     if currentCameraIndex == selectedCameraFeed:
                         cv2.imshow("live_feed", frame)
                         cv2.waitKey(1)
+                    elif selectedCameraFeed == 4:
+                        spliceFrames[currentCameraIndex] = frame
+                        if not None in spliceFrames:
+                            spliceFrames = downsample_and_merge_feeds(spliceFrames)
+
+
 
                 sharedFramesSavedCounter[0][0] += 1
 
