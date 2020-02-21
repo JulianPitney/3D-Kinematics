@@ -42,16 +42,18 @@ def downsample_and_merge_feeds(frames):
 
     r = 720.0 / frames[0].shape[1]
     dim = (720, int(frames[0].shape[0] * r))
+    font = cv2.FONT_HERSHEY_COMPLEX_SMALL
 
     resizedFrames = []
-    for frame in frames:
-         resizedFrames.append(cv2.resize(frame, dim, interpolation=cv2.INTER_AREA))
+    for i in range(0, len(frames)):
+         cv2.putText(frames[i], "Cam" + str(i), (0, 0), font, 0.8, (255, 0, 0), 2, cv2.LINE_AA)
+         resizedFrames.append(cv2.resize(frames[i], dim, interpolation=cv2.INTER_AREA))
 
     top = np.concatenate((resizedFrames[0], resizedFrames[1]), axis=1)
     bottom = np.concatenate((resizedFrames[2], resizedFrames[3]), axis=1)
     merged = np.concatenate((top, bottom), axis=0)
     cv2.imshow("live_feed", merged)
-    cv2.waitKey(0)
+    cv2.waitKey(1)
 
 
 def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
