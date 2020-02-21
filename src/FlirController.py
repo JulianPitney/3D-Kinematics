@@ -43,7 +43,6 @@ def init_video_windows():
     return windowNames
 
 
-
 def init_video_writers(path):
 
     videoWriters = []
@@ -63,10 +62,22 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
     videoWriters = []
     readyToSave = False
     currentCameraIndex = 0
-
+    selectedCameraFeed = 0
     mainQueue.put('READY')
 
     while True:
+
+        c = chr(cv2.waitKey(1) & 255)
+        if '0' == c:
+            selectedCameraFeed = 0
+        elif '1' == c:
+            selectedCameraFeed = 1
+        elif '2' == c:
+            selectedCameraFeed = 2
+        elif '3' == c:
+            selectedCameraFeed = 3
+
+
         if not queue.empty():
 
             msg = queue.get()
@@ -78,6 +89,8 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
                     videoWriters = init_video_writers(videoPath)
                 if config.DISPLAY_VIDEO_FEEDS:
                     windowNames = init_video_windows()
+                if config.DISPLAY_MAIN_FEED:
+                    cv2.namedWindow("main_feed", cv2.WINDOW_NORMAL)
 
                 readyToSave = True
             # Save frame request from capture process
@@ -95,6 +108,10 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
                     resized = cv2.resize(frame, dim, interpolation=cv2.INTER_AREA)
                     cv2.imshow(windowNames[currentCameraIndex], resized)
                     cv2.waitKey(1)
+                if config.DISPLAY_MAIN_FEED:
+                    if currentCameraIndex == selectedCameraFeed:
+                        cv2.imshow("main_feed", frame)
+
 
                 sharedFramesSavedCounter[0][0] += 1
 
