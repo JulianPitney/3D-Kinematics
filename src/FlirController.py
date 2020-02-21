@@ -46,7 +46,7 @@ def downsample_and_merge_feeds(frames):
 
     resizedFrames = []
     for i in range(0, len(frames)):
-         cv2.putText(frames[i], "Cam" + str(i), (0, 0), font, 0.8, (255, 0, 0), 2, cv2.LINE_AA)
+         cv2.putText(frames[i], "Cam" + str(i), (10, 25), font, 0.8, (255, 0, 0), 2, cv2.LINE_AA)
          resizedFrames.append(cv2.resize(frames[i], dim, interpolation=cv2.INTER_AREA))
 
     top = np.concatenate((resizedFrames[0], resizedFrames[1]), axis=1)
@@ -112,6 +112,7 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
                 if config.DISPLAY_VIDEO_FEED:
 
                     if currentCameraIndex == selectedCameraFeed:
+                        cv2.putText(frame, "Cam" + str(currentCameraIndex), (10, 25), cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.8, (255, 0, 0), 2, cv2.LINE_AA)
                         cv2.imshow("live_feed", frame)
                         cv2.waitKey(1)
                     elif selectedCameraFeed == 4:
