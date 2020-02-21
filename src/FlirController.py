@@ -81,6 +81,9 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
             selectedCameraFeed = 3
         elif '4' == c:
             selectedCameraFeed = 4
+        elif 'q' == c:
+            mainQueue.put("SHUTDOWN")
+
 
 
         if not queue.empty():
@@ -643,6 +646,12 @@ class CameraController(object):
         #timestamps = [[], [], [], []]
 
         for frameNum in range(0, numFramesToAcquire):
+
+            if not self.mainQueue.empty():
+                msg = self.mainQueue.get()
+                if msg == "SHUTDOWN":
+                    break
+
             # Check that we're not lapping the frame saving process
             if frameNum * config.NUM_CAMERAS >= self.sharedFrameSaveCounter[0][0] + config.MAX_FRAMES_IN_BUFFER:
                 print("Error: Out of memory!")
@@ -670,6 +679,5 @@ class CameraController(object):
             #print("CAM1 " + str(ts1b - ts1))
             #print("CAM2 " + str(ts2b - ts2))
         """
-
-        cv2.destroyAllWindows()
-        print("Recording completed!\n")
+        if path != "LIVE_FEED_000XX00XX":
+            print("Recording completed!\n")

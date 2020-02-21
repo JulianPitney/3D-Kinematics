@@ -21,6 +21,9 @@ def main():
             trialName = input("Enter trial name: ")
             path = config.VIDEOS_FOLDER + "\\" + str(trialName)
 
+            if trialName == "LIVE_FEED_000XX00XX":
+                print("Illegal trialName, try again!")
+                continue
             try:
                 os.mkdir(path)
             except OSError:
