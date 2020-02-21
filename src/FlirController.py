@@ -52,7 +52,6 @@ def downsample_and_merge_feeds(frames):
     merged = np.concatenate((top, bottom), axis=0)
     cv2.imshow("live_feed", merged)
     cv2.waitKey(0)
-    return [None, None, None, None]
 
 
 def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
@@ -64,6 +63,7 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
     currentCameraIndex = 0
     selectedCameraFeed = 0
     spliceFrames = [None, None, None, None]
+    spliceFramesArrivalFlags = [0, 0, 0, 0]
     mainQueue.put('READY')
 
     while True:
@@ -114,9 +114,11 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
                         cv2.waitKey(1)
                     elif selectedCameraFeed == 4:
                         spliceFrames[currentCameraIndex] = frame
-                        if not None in spliceFrames:
-                            spliceFrames = downsample_and_merge_feeds(spliceFrames)
+                        spliceFramesArrivalFlags[currentCameraIndex] = 1
 
+                        if 0 not in spliceFramesArrivalFlags:
+                            downsample_and_merge_feeds(spliceFrames)
+                            spliceFramesArrivalFlags = [0, 0, 0, 0]
 
 
                 sharedFramesSavedCounter[0][0] += 1
