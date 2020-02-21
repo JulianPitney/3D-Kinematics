@@ -90,6 +90,11 @@ def concurrent_save(shape, path, queue, mainQueue, shape2, path2):
             # Start recording signal
             if msg[0] == 'START':
                 videoPath = msg[1]
+
+                if videoPath == "LIVE_FEED_000XX00XX":
+                    config.RECORD_VIDEO = False
+                    config.DISPLAY_VIDEO_FEED = True
+
                 if config.RECORD_VIDEO:
                     videoWriters = init_video_writers(videoPath)
                 if config.DISPLAY_VIDEO_FEED:
@@ -628,7 +633,11 @@ class CameraController(object):
 
         print("Beginning recording...")
         sharedFrameBufferIndex = 0
-        numFramesToAcquire = int(config.MAX_TRIGGERED_FPS * config.RECORDING_DURATION_S)
+        if path == "LIVE_FEED_000XX00XX":
+            numFramesToAcquire = 2000000
+        else:
+            numFramesToAcquire = int(config.MAX_TRIGGERED_FPS * config.RECORDING_DURATION_S)
+
         self.saveProcQueue.put(['START', path])
         self.arduinoController.start_pulses(numFramesToAcquire)
         #timestamps = [[], [], [], []]

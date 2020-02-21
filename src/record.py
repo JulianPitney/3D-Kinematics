@@ -11,6 +11,7 @@ def main():
         print("\n[1] Exit")
         print("[2] New Trial")
         print("[3] Analyze Trials")
+        print("[4] Live Feed")
         menuIndex = input("Input: ")
 
         if menuIndex == '1':
@@ -68,7 +69,8 @@ def main():
 
 
 
-
+        elif menuIndex == '4':
+            flirController.synchronous_record("LIVE_FEED_000XX00XX")
         else:
             print("Invalid selection! Try again.")
 
