@@ -8,10 +8,11 @@ def main():
 
     while 1:
 
-        print("\n[1] Exit")
+        print("[1] Exit")
         print("[2] New Trial")
         print("[3] Analyze Trials")
         print("[4] Live Feed")
+        print("[5] Calibrate Corners")
         menuIndex = input("Input: ")
 
         if menuIndex == '1':
@@ -74,6 +75,8 @@ def main():
 
         elif menuIndex == '4':
             flirController.synchronous_record("LIVE_FEED_000XX00XX")
+        elif menuIndex == '5':
+            flirController.take_corner_calibration_pictures()
         else:
             print("Invalid selection! Try again.")
 

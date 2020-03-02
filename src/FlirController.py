@@ -6,6 +6,7 @@ import numpy as np
 from ctypes import sizeof, c_uint8, c_uint64
 from mmap import mmap
 import multiprocessing as mp
+import os
 
 class TriggerType:
     SOFTWARE = 1
@@ -169,7 +170,8 @@ class CameraController(object):
         self.cameras = [None] * config.NUM_CAMERAS
         self.nodemaps = [None] * config.NUM_CAMERAS
         self.cameraIDS = [None] * config.NUM_CAMERAS
-
+        self.corner_calib_pt = []
+        self.corner_selected = False
 
         # Spinnaker Initialization
         self.camList, self.system = self.init_spinnaker()
@@ -630,6 +632,61 @@ class CameraController(object):
             result = False
 
         return result
+
+
+    def click_and_crop(self, event, x, y, flags, param):
+
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.corner_calib_pt = (x, y)
+            self.corner_selected = True
+
+
+    def take_corner_calibration_pictures(self):
+
+        if os.path.exists("..\\calib\\cam_corners.txt"):
+            os.remove("..\\calib\\cam_corners.txt")
+
+
+
+
+        frames = []
+        cv2.namedWindow('image')
+        cv2.setMouseCallback('image', self.click_and_crop)
+        self.arduinoController.start_pulses(1)
+        for camIndex in range(0, config.NUM_CAMERAS):
+            img_result = self.cameras[camIndex].GetNextImage()
+            frames.append(img_result.GetNDArray())
+            img_result.Release()
+
+
+        frames_corners = []
+
+        for i in range(0, len(frames)):
+
+            corners = []
+
+            for x in range(0, 4):
+
+                while True:
+                    cv2.imshow('image', frames[i])
+                    cv2.waitKey(1)
+                    if self.corner_selected:
+                        corners.append(self.corner_calib_pt)
+                        self.corner_selected = False
+                        break
+
+            frames_corners.append(corners)
+
+        f = open("..\\calib\\cam_corners.txt", "a+")
+        for i in range(0, 4):
+            f.write(str(frames_corners[i][0][0]) + " " + str(frames_corners[i][0][1]) + "," + \
+                     str(frames_corners[i][1][0]) + " " + str(frames_corners[i][1][1]) + "," + \
+                     str(frames_corners[i][2][0]) + " " + str(frames_corners[i][2][1]) + "," + \
+                     str(frames_corners[i][3][0]) + " " + str(frames_corners[i][3][1]) + "\n")
+        f.close()
+        cv2.destroyAllWindows()
+
+
 
 
     def synchronous_record(self, path):
